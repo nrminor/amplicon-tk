@@ -5,7 +5,7 @@
 # Aliases/shorthands for the recipes below
 alias rs := rust
 # alias readme := make-readme
-# alias zip := compress_html
+alias zip := compress_html
 alias doc := docs
 alias qmd := quarto
 alias env := setup-env
@@ -64,24 +64,26 @@ rust: check fmt clippy test sort audit
 
 # render quarto documents
 render:
-    quarto render docs
+    quarto render docs/index.qmd
+    quarto render docs/examples.qmd
 
 # turn rendered index quarto file into the repo readme
 # make-readme:
 # @mv docs/index.md ./README.md
 
 # render developer guide
-# render-dev:
-# quarto render docs/developer.qmd
+render-dev:
+    quarto render docs/developer.qmd
 
 # compress rendered HTML
-# compress_html:
-# @gzip -f docs/index.html
-# @gzip -f docs/developer.html
+compress_html:
+    @gzip -f docs/index.html
+    @gzip -f docs/developer.html
+    @gzip -f docs/examples.html
 
-quarto: render # render-dev
+quarto: render render-dev
 
-docs: render # make-readme render-dev compress_html
+docs: render render-dev compress_html # make-readme
 
 
 # Docker recipes

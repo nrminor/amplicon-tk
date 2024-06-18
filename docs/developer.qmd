@@ -1,0 +1,12 @@
+---
+title: "Developer Guide"
+toc: true
+format:
+    html:
+        embed-resources: true
+        keep-ipynb: false
+    typst: default
+    gfm: default
+editor: source
+engine: knitr
+---

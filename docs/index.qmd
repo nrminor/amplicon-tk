@@ -1,0 +1,12 @@
+---
+title: "`amplicon-tk`: A Command Line and Python Interface for Amplicon-aware FASTQ Operations"
+toc: true
+format:
+    html:
+        embed-resources: true
+        keep-ipynb: false
+    typst: default
+    gfm: default
+editor: source
+engine: knitr
+---
