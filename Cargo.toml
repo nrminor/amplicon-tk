@@ -1,0 +1,24 @@
+[package]
+name = "amplicon-tk"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+readme = "README.md"
+keywords = ["science", "reproducibility", "bioinformatics", "data"]
+categories = ["command-line-utilities", "science"]
+
+[[bin]]
+name = "amplicon-tk"
+path = "src/main.rs"
+
+[dependencies]
+color-eyre = "0.6.3"
+needletail = "0.5.1"
+pyo3 = { version = "0.21.2", features = ["extension-module"] }
+sccache = "0.8.1"
+tokio = { version = "1.9.0", features = ["full"] }
+tracing = "0.1.26"
+tracing-subscriber = "0.2.19"
+
+[profile.release]
+lto = true
