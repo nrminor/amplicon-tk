@@ -1,7 +1,17 @@
-use color_eyre::eyre::Result;
 use derive_new::new;
-use needletail::parser::SequenceRecord;
 use serde::{Deserialize, Serialize};
+
+use crate::Record;
+
+// #![warn(missing_docs)]
+
+#[derive(Debug, new)]
+pub struct Reads<'a> {
+    pub reads: Vec<Record<'a>>,
+    pub unique_seqs: Vec<SeqFreq>,
+    #[new(value = "0.0")]
+    pub min_freq: f32,
+}
 
 #[derive(Debug, new, Serialize, Deserialize)]
 pub struct SeqFreq {
@@ -9,32 +19,22 @@ pub struct SeqFreq {
     _freq: f32,
 }
 
-#[derive(Debug, new)]
-pub struct Reads<'a> {
-    pub reads: Vec<SequenceRecord<'a>>,
-    pub unique_seqs: Vec<SeqFreq>,
-    #[new(value = "0.0")]
-    pub min_freq: f32,
+// pub trait Freq {
+//     fn reduce_to_unique_reads() {}
+
+//     fn count_uniques() {}
+// }
+
+pub trait Filter {
+    // filter_by_freq() {}
+
+    // filter_by_qual() {}
+
+    // filter_by_len() {}
+
+    // filter_invalid_reads() {}
 }
 
-pub trait FreqCalculator {}
-
-pub trait Trim {
-    fn trim_fwd_primer<'a>(
-        record: &'a mut SequenceRecord<'a>,
-        _primer: &'a str,
-    ) -> Result<&'a SequenceRecord<'a>> {
-        Ok(record)
-    }
-
-    fn trim_rev_primer<'a>(
-        record: &'a mut SequenceRecord<'a>,
-        _primer: &'a str,
-    ) -> Result<&'a SequenceRecord<'a>> {
-        Ok(record)
-    }
-}
+pub trait Sort {}
 
 // impl FreqCalculator for Reads {}
-
-// impl Trim for Reads {}

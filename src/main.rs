@@ -1,6 +1,8 @@
 use color_eyre::eyre::Result;
 use tracing_subscriber::EnvFilter;
 
+// #![warn(missing_docs)]
+
 #[tokio::main]
 async fn main() -> Result<()> {
     setup()?;
