@@ -3,6 +3,7 @@ use per_record::Record;
 use primers::PrimerPair;
 
 pub mod cli;
+pub mod io;
 pub mod per_record;
 pub mod primers;
 pub mod py_api;

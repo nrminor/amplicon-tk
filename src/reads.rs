@@ -1,3 +1,4 @@
+use color_eyre::eyre::Result;
 use derive_new::new;
 use serde::{Deserialize, Serialize};
 
@@ -36,5 +37,3 @@ pub trait Filter {
 }
 
 pub trait Sort {}
-
-// impl FreqCalculator for Reads {}
