@@ -1,3 +1,5 @@
+use amplicon_tk::cli::{self, Commands};
+use clap::Parser;
 use color_eyre::eyre::Result;
 use tracing_subscriber::EnvFilter;
 
@@ -7,7 +9,43 @@ use tracing_subscriber::EnvFilter;
 async fn main() -> Result<()> {
     setup()?;
 
-    println!("Hello from a (so far completely unnecessary) async runtime");
+    let cli = cli::Cli::parse();
+    match &cli.command {
+        Some(Commands::Trim {
+            input_file,
+            bed_file,
+            primer_file,
+            ref_file,
+            keep_multi,
+            output,
+        }) => {
+            eprintln!("{}\n", cli::INFO);
+        }
+        Some(Commands::Sort {
+            input_file,
+            bed_file,
+            primer_file,
+            ref_file,
+            min_freq,
+            keep_multi,
+        }) => {
+            eprintln!("{}\n", cli::INFO);
+        }
+        Some(Commands::Consensus {
+            input_file,
+            bed_file,
+            primer_file,
+            ref_file,
+            min_freq,
+            keep_multi,
+            output,
+        }) => {
+            eprintln!("{}\n", cli::INFO);
+        }
+        None => {
+            eprintln!("{}\n", cli::INFO);
+        }
+    }
 
     Ok(())
 }

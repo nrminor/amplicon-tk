@@ -1,14 +1,11 @@
-use color_eyre::eyre::Result;
 use derive_new::new;
 use serde::{Deserialize, Serialize};
-
-use crate::Record;
 
 // #![warn(missing_docs)]
 
 #[derive(Debug, new)]
-pub struct Reads<'a> {
-    pub reads: Vec<Record<'a>>,
+pub struct Reads<R> {
+    pub reads: R,
     pub unique_seqs: Vec<SeqFreq>,
     #[new(value = "0.0")]
     pub min_freq: f32,

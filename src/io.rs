@@ -1,9 +1,9 @@
 use crate::reads::Reads;
 use color_eyre::eyre::Result;
 
-pub trait SeqReader<'a> {
-    fn read_fq(self) -> Result<Reads<'a>>;
-    fn read_fa(self) -> Result<Reads<'a>>;
+pub trait SeqReader<'a, R> {
+    fn read_fq(self) -> Result<Reads<R>>;
+    fn read_fa(self) -> Result<Reads<R>>;
 }
 
 pub trait SeqWriter {

@@ -20,7 +20,7 @@ clap-verbosity-flag = "2.2.0"
 color-eyre = "0.6.3"
 derive-new = "0.6.0"
 itertools = "0.12.1"
-needletail = "0.5.1"
+noodles = { version = "0.77.0", features = ["fasta", "fastq", "bed", "async"] }
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
 rayon = "1.9.0"
 sccache = "0.8.1"
