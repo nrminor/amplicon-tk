@@ -21,3 +21,14 @@ Options:
   -h, --help        Print help
   -V, --version     Print version
 ```
+
+Feature roadmap:
+
+-   method for pulling primer sequences based on coordinates in a BED file and sequence in a reference FASTA
+-   doc-tested and "black-box" unit-tested read sequence and quality score trimming
+-   trimming and other read operations that are generic to FASTQs and FASTAs
+-   method for finding unique sequences alongside frequencies of their instances in the dataset ✅
+-   method for sorting out reads into individual "stacks" that can be written out to individual FASTQs ✅
+-   readers and writers for all of the above file formats
+-   async throughout
+-   Python library interface via Pyo3
