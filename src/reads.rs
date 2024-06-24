@@ -1,15 +1,16 @@
 use crate::{
     primers::PrimerPair,
-    record::{find_amplicon, Trim},
+    record::{FindAmplicons, Trim},
 };
 use color_eyre::eyre::Result;
-use noodles::fastq::Record;
+use noodles::fastq::Record as FastqRecord;
 use std::{collections::HashMap, fs::File, io::BufReader};
 
 // #![warn(missing_docs)]
 
+#[derive(Debug)]
 pub struct Reads {
-    pub reads: Vec<Record>,
+    pub reads: Vec<FastqRecord>,
     pub unique_seqs: HashMap<Vec<u8>, f64>,
     pub min_freq: f64,
     pub max_len: Option<usize>,
@@ -22,7 +23,7 @@ impl Reads {
         min_freq: Option<f64>,
         max_len: Option<usize>,
     ) -> Self {
-        let reads: Vec<Record> = reader.records().filter_map(|record| record.ok()).collect();
+        let reads: Vec<FastqRecord> = reader.records().filter_map(|record| record.ok()).collect();
 
         let (seq_counts, total_count) =
             reads
@@ -46,25 +47,35 @@ impl Reads {
             max_len,
         }
     }
+}
 
+pub trait Trimming {
     /// .
     ///
     /// # Errors
     ///
     /// This function will return an error if .
-    pub fn run_trimming(&mut self, primer_pairs: &[PrimerPair]) -> Result<Self> {
-        let mut record_with_primers: Vec<(&Record, &PrimerPair)> = self
+    fn run_trimming(&mut self, primer_pairs: &[PrimerPair]) -> Result<Self>
+    where
+        Self: std::marker::Sized;
+}
+
+impl Trimming for Reads {
+    fn run_trimming(&mut self, primer_pairs: &[PrimerPair]) -> Result<Self> {
+        let record_with_primers: Vec<(&FastqRecord, &PrimerPair)> = self
             .reads
             .iter()
             .filter_map(|record| {
-                find_amplicon(record, primer_pairs).map(|primers_found| (record, primers_found))
+                record
+                    .amplicon(primer_pairs)
+                    .map(|primers_found| (record, primers_found))
             })
             .collect();
 
-        let trimmed_reads: Vec<Record> = record_with_primers
+        let trimmed_reads: Vec<FastqRecord> = record_with_primers
             .iter()
             .filter_map(|(record, primers)| record.trim_to_primers(primers).ok())
-            .filter_map(|record| record)
+            .flatten()
             .collect();
 
         let new_dataset = Reads {
@@ -76,13 +87,21 @@ impl Reads {
 
         Ok(new_dataset)
     }
+}
 
-    /// Returns the run filters of this [`Reads`].
+pub trait Filtering {
+    /// .
     ///
     /// # Errors
     ///
     /// This function will return an error if .
-    pub fn run_filters(&mut self) -> Result<Self> {
+    fn run_filters(&mut self) -> Result<Self>
+    where
+        Self: std::marker::Sized;
+}
+
+impl Filtering for Reads {
+    fn run_filters(&mut self) -> Result<Self> {
         let filtered_reads = self
             .reads
             .iter()
@@ -105,14 +124,20 @@ impl Reads {
             max_len: self.max_len,
         })
     }
+}
 
-    /// Returns the sort reads of this [`Reads`].
+pub trait Sorting {
+    /// .
     ///
     /// # Errors
     ///
     /// This function will return an error if .
-    pub fn sort_reads(&mut self) -> Result<Vec<Vec<Record>>> {
-        let mut sorted_reads: HashMap<Vec<u8>, Vec<Record>> = HashMap::new();
+    fn sort_reads(&mut self) -> Result<Vec<Vec<FastqRecord>>>;
+}
+
+impl Sorting for Reads {
+    fn sort_reads(&mut self) -> Result<Vec<Vec<FastqRecord>>> {
+        let mut sorted_reads: HashMap<Vec<u8>, Vec<FastqRecord>> = HashMap::new();
 
         for key in self.unique_seqs.keys() {
             sorted_reads.insert(key.clone(), Vec::new());
@@ -125,7 +150,7 @@ impl Reads {
             sorted_reads.entry(seq).or_default().push(read.clone());
         });
 
-        let read_stacks: Vec<Vec<Record>> = sorted_reads.into_values().collect();
+        let read_stacks: Vec<Vec<FastqRecord>> = sorted_reads.into_values().collect();
 
         Ok(read_stacks)
     }

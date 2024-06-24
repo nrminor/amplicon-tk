@@ -5,30 +5,29 @@ use crate::primers::PrimerPair;
 
 // #![warn(missing_docs)]
 
-/// .
-///
-/// # Panics
-///
-/// Panics if .
-pub fn find_amplicon<'a>(
-    record: &'a FastqRecord,
-    primerpairs: &'a [PrimerPair<'a>],
-) -> Option<&'a PrimerPair<'a>> {
-    let amplicon_match: Vec<&PrimerPair> = primerpairs
-        .iter()
-        .filter(|pair| {
-            std::str::from_utf8(record.sequence())
-                .unwrap()
-                .contains(pair.fwd)
-                && std::str::from_utf8(record.sequence())
-                    .unwrap()
-                    .contains(pair.rev)
-        })
-        .collect();
+pub trait FindAmplicons {
+    /// .
+    fn amplicon<'a>(&'a self, primerpairs: &'a [PrimerPair<'a>]) -> Option<&'a PrimerPair<'a>>;
+}
 
-    match amplicon_match.len() {
-        1 => Some(amplicon_match[0]),
-        _ => None,
+impl FindAmplicons for FastqRecord {
+    fn amplicon<'a>(&'a self, primerpairs: &'a [PrimerPair<'a>]) -> Option<&'a PrimerPair<'a>> {
+        let amplicon_match: Vec<&PrimerPair> = primerpairs
+            .iter()
+            .filter(|pair| {
+                std::str::from_utf8(self.sequence())
+                    .unwrap()
+                    .contains(pair.fwd)
+                    && std::str::from_utf8(self.sequence())
+                        .unwrap()
+                        .contains(pair.rev)
+            })
+            .collect();
+
+        match amplicon_match.len() {
+            1 => Some(amplicon_match[0]),
+            _ => None,
+        }
     }
 }
 
@@ -52,9 +51,9 @@ impl<'a> Trim<'a> for FastqRecord {
                 let new_end = rev_idx - primers.rev.len();
 
                 let trimmed_record = FastqRecord::new(
-                    *self.definition(),
+                    self.definition().clone(),
                     self.sequence()[new_start..new_end].to_vec(),
-                    self.quality_scores()[new_start..new_end].to_vec();
+                    self.quality_scores()[new_start..new_end].to_vec(),
                 );
 
                 Ok(Some(trimmed_record))
