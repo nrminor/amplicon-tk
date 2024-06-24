@@ -1,5 +1,7 @@
 # `amplicon-tk`: A Command Line and Python Interface for Amplicon-aware FASTQ Operations
 
+[![Rust CI](https://github.com/nrminor/amplicon-tk/actions/workflows/ci.yml/badge.svg)](https://github.com/nrminor/amplicon-tk/actions/workflows/ci.yml)
+
 `amplicon-tk` implements three subcommands—trim, sort, and consensus—that, unlike many
 other tools, are amplicon-aware. By that, we mean that amplicon-tk enforces a simple rule:
 any given read must contain both primers in at least one amplicon. This ensures that all
