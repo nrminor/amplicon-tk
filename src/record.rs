@@ -6,8 +6,13 @@ use crate::primers::PrimerPair;
 // #![warn(missing_docs)]
 
 pub trait FindAmplicons {
-    /// .
     fn amplicon<'a>(&'a self, primerpairs: &'a [PrimerPair<'a>]) -> Option<&'a PrimerPair<'a>>;
+}
+
+pub trait Trim<'a> {
+    fn trim_to_primers(&self, primers: &'a PrimerPair) -> Result<Option<Self>>
+    where
+        Self: Sized;
 }
 
 impl FindAmplicons for FastqRecord {
@@ -29,17 +34,6 @@ impl FindAmplicons for FastqRecord {
             _ => None,
         }
     }
-}
-
-pub trait Trim<'a> {
-    /// .
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if .
-    fn trim_to_primers(&self, primers: &'a PrimerPair) -> Result<Option<Self>>
-    where
-        Self: Sized;
 }
 
 impl<'a> Trim<'a> for FastqRecord {
