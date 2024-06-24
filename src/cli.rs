@@ -15,7 +15,7 @@ pub const INFO: &str = r"
 ampliton-tk: A Command Line and Python Interface for Amplicon-Aware FASTQ Operations
 ====================================================================================
 
-ampliton-tk implements three subcommands—trim, sort, and consensus—that, unlike many
+amplicon-tk implements three subcommands—trim, sort, and consensus—that, unlike many
 other tools, are amplicon-aware. By that, we mean that amplicon-tk enforces a simple rule:
 any given read must contain both primers in at least one amplicon. This ensures that all
 reads in the resulting dataset will correspond to one, complete amplicon, meaning that PCR
