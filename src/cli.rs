@@ -49,10 +49,6 @@ pub enum Commands {
         #[arg(short, long, required = false)]
         bed_file: PathBuf,
 
-        /// Primer sequences in FASTA format
-        #[arg(short, long, required = true)]
-        primer_file: PathBuf,
-
         /// Reference sequence in FASTA format
         #[arg(short, long, required = false)]
         ref_file: PathBuf,
@@ -60,6 +56,22 @@ pub enum Commands {
         /// Whether to keep reads that contain multiple pairs of primers
         #[arg(short, long, required = false, default_value_t = false)]
         keep_multi: bool,
+
+        /// The suffix used to identify forward primers in the provided BED file
+        #[arg(short, long, required = false, default_value = "_LEFT")]
+        fwd_suffix: String,
+
+        /// The suffix used to identify reverse primers in the provided BED file
+        #[arg(short, long, required = false, default_value = "_RIGHT")]
+        rev_suffix: String,
+
+        /// The minimum allowed frequency for amplicon variants
+        #[arg(short, long, required = false, default_value = "None")]
+        freq_min: Option<f64>,
+
+        /// Whether to filter by an expected maximum length for amplicons in this scheme
+        #[arg(short, long, required = false, default_value = "None")]
+        len: Option<usize>,
 
         /// Output file name
         #[arg(short, long, required = false, default_value = "trimmed.fastq.gz")]

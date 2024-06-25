@@ -1,5 +1,5 @@
 use crate::{
-    primers::PrimerPair,
+    primers::{AmpliconScheme, PrimerPair},
     record::{FindAmplicons, Trim},
 };
 use color_eyre::eyre::Result;
@@ -55,19 +55,20 @@ pub trait Trimming {
     /// # Errors
     ///
     /// This function will return an error if .
-    fn run_trimming(&mut self, primer_pairs: &[PrimerPair]) -> Result<Self>
+    fn run_trimming(&mut self, primer_pairs: AmpliconScheme) -> Result<Self>
     where
         Self: std::marker::Sized;
 }
 
 impl Trimming for Reads {
-    fn run_trimming(&mut self, primer_pairs: &[PrimerPair]) -> Result<Self> {
+    fn run_trimming(&mut self, amplicon_scheme: AmpliconScheme) -> Result<Self> {
+        let primer_pairs = amplicon_scheme.scheme;
         let record_with_primers: Vec<(&FastqRecord, &PrimerPair)> = self
             .reads
             .iter()
             .filter_map(|record| {
                 record
-                    .amplicon(primer_pairs)
+                    .amplicon(&primer_pairs)
                     .map(|primers_found| (record, primers_found))
             })
             .collect();

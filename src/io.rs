@@ -13,7 +13,7 @@ pub trait SeqReader {
 
 pub trait SeqWriter {
     fn write_fq(self) -> Result<()>;
-    fn write_fa(self) -> Result<()>;
+    // fn write_fa(self) -> Result<()>;
 }
 
 pub trait PrimerReader {
@@ -38,7 +38,11 @@ impl SeqReader for noodles::fastq::Reader<BufReader<File>> {
     }
 }
 
-// impl SeqWriter for
+// impl SeqWriter for FqWriter<BufWriter<File>> {
+//     fn write_fq(self) -> Result<()> {
+
+//     }
+// }
 
 impl PrimerReader for noodles::bed::Reader<BufReader<File>> {
     fn read_bed(input_path: &Path) -> Result<Self> {

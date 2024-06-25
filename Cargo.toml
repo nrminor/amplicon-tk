@@ -19,6 +19,7 @@ clap = { version = "4.4.3", features = ["derive", "cargo"] }
 clap-verbosity-flag = "2.2.0"
 color-eyre = "0.6.3"
 derive-new = "0.6.0"
+flate2 = "1.0.30"
 itertools = "0.12.1"
 noodles = { version = "0.77.0", features = ["fasta", "fastq", "bed", "async"] }
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
