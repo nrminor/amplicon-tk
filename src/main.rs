@@ -37,22 +37,22 @@ async fn main() -> Result<()> {
         Some(Commands::Trim {
             input_file,
             bed_file,
-            ref_file,
+            fasta_ref,
             keep_multi: _,
-            fwd_suffix,
-            rev_suffix,
-            freq_min,
-            len,
+            left_suffix,
+            right_suffix,
+            min_freq,
+            expected_len,
             output,
         }) => {
             let fastq = FqReader::read_fq(input_file)?;
             let bed = BedReader::read_bed(bed_file)?;
-            let mut fasta = FaReader::read_ref(ref_file)?;
+            let mut fasta = FaReader::read_ref(fasta_ref)?;
 
             let ref_dict = ref_to_dict(&mut fasta).await?;
-            let scheme = define_amplicons(bed, &ref_dict, fwd_suffix, rev_suffix).await?;
+            let scheme = define_amplicons(bed, &ref_dict, left_suffix, right_suffix).await?;
 
-            let trimmed_reads = Reads::new(fastq, *freq_min, *len)
+            let trimmed_reads = Reads::new(fastq, *min_freq, *expected_len)
                 .await
                 .run_trimming(scheme)?;
 
