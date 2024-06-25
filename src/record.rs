@@ -1,15 +1,19 @@
+#![warn(missing_docs)]
+
+//!
+
 use color_eyre::eyre::Result;
 use noodles::fastq::Record as FastqRecord;
 
 use crate::primers::PrimerPair;
 
-// #![warn(missing_docs)]
-
+///
 pub trait FindAmplicons {
     /// .
     fn amplicon<'a>(&'a self, primerpairs: &'a [PrimerPair<'a>]) -> Option<&'a PrimerPair<'a>>;
 }
 
+///
 pub trait Trim<'a> {
     /// .
     ///

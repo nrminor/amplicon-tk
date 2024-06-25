@@ -1,3 +1,7 @@
+#![warn(missing_docs)]
+
+//!
+
 use std::io::BufReader;
 use std::{collections::HashMap, fs::File};
 
@@ -7,22 +11,28 @@ use derive_new::new;
 use noodles::bed::Reader as BedReader;
 use noodles::fasta::io::Reader as FastaReader;
 
-// #![warn(missing_docs)]
-
 struct PrimerSeq<'a> {
     primer_name: String,
     primer_seq: &'a str,
 }
 
+///
 #[derive(Debug, new)]
 pub struct PrimerPair<'a> {
+    ///
     pub amplicon: String,
+
+    ///
     pub fwd: &'a str,
+
+    ///
     pub rev: &'a str,
 }
 
+///
 #[derive(Debug)]
 pub struct AmpliconScheme<'a> {
+    ///
     pub scheme: Vec<PrimerPair<'a>>,
 }
 
@@ -31,7 +41,7 @@ pub struct AmpliconScheme<'a> {
 /// # Errors
 ///
 /// This function will return an error if .
-pub fn ref_to_dict(
+pub async fn ref_to_dict(
     ref_file: &mut FastaReader<BufReader<File>>,
 ) -> Result<HashMap<Vec<u8>, Vec<u8>>> {
     let ref_dict = ref_file
@@ -55,7 +65,7 @@ pub fn ref_to_dict(
 /// # Errors
 ///
 /// This function will return an error if .
-pub fn define_amplicons<'a>(
+pub async fn define_amplicons<'a>(
     mut bed: BedReader<BufReader<File>>,
     ref_dict: &'a HashMap<Vec<u8>, Vec<u8>>,
     fwd_suffix: &'a str,
