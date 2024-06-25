@@ -10,39 +10,39 @@ use color_eyre::eyre::Result;
 use noodles::fastq::Record as FastqRecord;
 use std::{collections::HashMap, fs::File, io::BufReader};
 
-/// Struct `Reads` is mostly a container for an iterable collection of FASTQ records, though it
+/// Struct Reads is mostly a container for an iterable collection of FASTQ records, though it
 /// bundles those records alongside private fields used to process and filter the read dataset
 /// as a whole.
 ///
-/// Importantly, there are two methods of instantiating `Reads`: with the usual struct
-/// instantiating `Reads { }` syntax and with the `.new()` method. The former looks like this:
+/// Importantly, there are two methods of instantiating Reads: with the usual struct
+/// instantiating Reads { } syntax and with the .new() method. The former looks like this:
 ///
-/// ```rust
-/// use noodles::fastq::record::Record;
+/// //```rust
+/// //use noodles::fastq::record::Record;
+/// //
+/// //let record_vec: Vec<Record> = Record::new().iter().collect();
+/// //let new_reads = Reads {
+/// //    reads: record_vec
+/// //    ...
+/// //};
 ///
-/// let record_vec: Vec<Record> = Record::new().iter().collect();
-/// let new_reads = Reads {
-///     reads: record_vec
-///     ...
-/// }
-///
-/// Note that private fields have been ommitted. Instantiating `Reads` in this way allows users to
+/// Note that private fields have been ommitted. Instantiating Reads in this way allows users to
 /// create a new owned instance without reading a FASTQ again.
 ///
-/// The `.new()`-based method consumes a FASTQ reader and computes private fields automatically,
-/// and is thus recommended for most use cases. In crate `main`, its use looks like this:
+/// The .new()-based method consumes a FASTQ reader and computes private fields automatically,
+/// and is thus recommended for most use cases. In crate main, its use looks like this:
 ///
-/// ```rust
-///
-///     let trimmed_reads = Reads::new(fastq, *freq_min, *len)
-///         .await
-///         .run_trimming(scheme)?;
-/// ```
+/// //```rust
+/// //
+/// // let trimmed_reads = Reads::new(fastq, *freq_min, *len)
+/// //       .await
+/// //      .run_trimming(scheme)?;
+/// //```
 ///
 #[derive(Debug)]
 pub struct Reads {
-    /// A given FASTQ's individual records can be iterated through with the public field `reads`,
-    /// which contains a vector of noodles `Record` structs. More information on this struct's
+    /// A given FASTQ's individual records can be iterated through with the public field reads,
+    /// which contains a vector of noodles Record structs. More information on this struct's
     /// fields and implementations can be found in the noodles documentation at
     /// [https://docs.rs/noodles/latest/noodles/fastq/record/struct.Record.html](https://docs.rs/noodles/latest/noodles/fastq/record/struct.Record.html)
     pub reads: Vec<FastqRecord>,
@@ -52,8 +52,8 @@ pub struct Reads {
 }
 
 impl Reads {
-    /// Creates a new [`Reads`] by consuming a reader rather than constructing with a
-    /// `Vec<SeqRecord>`.
+    /// Creates a new [Reads` by consuming a reader rather than constructing with a
+    /// Vec<SeqRecord>.
     pub async fn new(
         mut reader: noodles::fastq::Reader<BufReader<File>>,
         min_freq: Option<f64>,

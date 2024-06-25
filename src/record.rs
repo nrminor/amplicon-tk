@@ -52,12 +52,12 @@ impl<'a> Trim<'a> for FastqRecord {
         match (&seq_str.find(primers.fwd), &seq_str.find(primers.rev)) {
             (Some(fwd_idx), Some(rev_idx)) => {
                 let new_start = fwd_idx + primers.fwd.len();
-                let new_end = rev_idx - primers.rev.len();
+                let new_end = rev_idx;
 
                 let trimmed_record = FastqRecord::new(
                     self.definition().clone(),
-                    self.sequence()[new_start..new_end].to_vec(),
-                    self.quality_scores()[new_start..new_end].to_vec(),
+                    self.sequence()[new_start..*new_end].to_vec(),
+                    self.quality_scores()[new_start..*new_end].to_vec(),
                 );
 
                 Ok(Some(trimmed_record))
