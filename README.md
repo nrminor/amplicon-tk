@@ -8,8 +8,8 @@ any given read must contain both primers in at least one amplicon. This ensures 
 reads in the resulting dataset will correspond to one, complete amplicon, meaning that PCR
 chimeras and other artifacts will be removed.
 
-> [!WARNING] > `amplicon-tk` is not ready to be used outside its developer team. An official release of multi-platform binaries alongside publication on [PyPI](https://pypi.org/) and [crates.io](https://crates.io/) will mark when the toolkit is ready for widespread usage. We may also choose to make it available on Bioconda, so stay tuned! See the feature roadmap below for our progress implementing the toolkit.
-
+> [!WARNING]
+> `amplicon-tk` is not ready to be used outside its developer team. An official release of multi-platform binaries alongside publication on [PyPI](https://pypi.org/) and [crates.io](https://crates.io/) will mark when the toolkit is ready for widespread usage. We may also choose to make it available on Bioconda, so stay tuned! See the feature roadmap below for our progress implementing the toolkit.
 ```
 Usage: amplicon-tk [OPTIONS] [COMMAND]
 
