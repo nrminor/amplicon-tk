@@ -7,6 +7,7 @@ use crate::{
     record::{FindAmplicons, Trim},
 };
 use color_eyre::eyre::Result;
+use flate2::read::GzDecoder;
 use noodles::fastq::Record as FastqRecord;
 use std::{collections::HashMap, fs::File, io::BufReader};
 
@@ -55,7 +56,7 @@ impl Reads {
     /// Creates a new [Reads` by consuming a reader rather than constructing with a
     /// Vec<SeqRecord>.
     pub async fn new(
-        mut reader: noodles::fastq::Reader<BufReader<File>>,
+        mut reader: noodles::fastq::Reader<BufReader<GzDecoder<File>>>,
         min_freq: Option<f64>,
         max_len: Option<usize>,
     ) -> Self {

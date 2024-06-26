@@ -117,23 +117,28 @@ pub async fn define_amplicons<'a>(
                 return None;
             }
 
-            let fwd = primers
+            let fwd_hits = primers
                 .iter()
                 .filter(|primer| primer.primer_name.contains(fwd_suffix))
-                .collect::<Vec<&&PrimerSeq>>()[0];
+                .collect::<Vec<&&PrimerSeq>>();
+            let fwd = fwd_hits.first();
 
-            let rev = primers
+            let rev_hits = primers
                 .iter()
                 .filter(|primer| primer.primer_name.contains(rev_suffix))
-                .collect::<Vec<&&PrimerSeq>>()[0];
+                .collect::<Vec<&&PrimerSeq>>();
+            let rev = rev_hits.first();
 
-            let pair = PrimerPair {
-                amplicon,
-                fwd: fwd.primer_seq,
-                rev: rev.primer_seq,
-            };
-
-            Some(pair)
+            if let (Some(fwd), Some(rev)) = (fwd, rev) {
+                let pair = PrimerPair {
+                    amplicon,
+                    fwd: fwd.primer_seq,
+                    rev: rev.primer_seq,
+                };
+                Some(pair)
+            } else {
+                None
+            }
         })
         .collect::<Vec<PrimerPair>>();
 

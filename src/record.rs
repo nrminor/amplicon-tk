@@ -30,12 +30,13 @@ impl FindAmplicons for FastqRecord {
         let amplicon_match: Vec<&PrimerPair> = primerpairs
             .iter()
             .filter(|pair| {
-                std::str::from_utf8(self.sequence())
-                    .unwrap()
-                    .contains(pair.fwd)
-                    && std::str::from_utf8(self.sequence())
-                        .unwrap()
-                        .contains(pair.rev)
+                self.sequence()
+                    .windows(pair.fwd.len())
+                    .any(|window| window == pair.fwd.as_bytes())
+                    && self
+                        .sequence()
+                        .windows(pair.rev.len())
+                        .any(|window| window == pair.rev.as_bytes())
             })
             .collect();
 

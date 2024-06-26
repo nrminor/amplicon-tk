@@ -12,6 +12,7 @@ use std::{fs::File, io::BufReader, path::Path};
 
 use color_eyre::eyre::Result;
 
+use flate2::read::GzDecoder;
 use noodles::bed::Reader as BedReader;
 use noodles::fasta::Reader as FaReader;
 use noodles::fastq::io::Writer as FqWriter;
@@ -49,9 +50,10 @@ pub trait SeqWriter {
     fn write_fq(self, fq_dataset: Reads) -> Result<()>;
 }
 
-impl SeqReader for FqReader<BufReader<File>> {
+impl SeqReader for FqReader<BufReader<GzDecoder<File>>> {
     fn read_fq(input_path: &Path) -> Result<Self> {
         let reader = File::open(input_path)
+            .map(flate2::read::GzDecoder::new)
             .map(BufReader::new)
             .map(noodles::fastq::io::Reader::new)?;
 

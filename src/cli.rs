@@ -66,11 +66,11 @@ pub enum Commands {
         right_suffix: String,
 
         /// The minimum allowed frequency for amplicon variants
-        #[arg(short, long, required = false, default_value = "None")]
+        #[arg(short, long, required = false)]
         min_freq: Option<f64>,
 
         /// Whether to filter by an expected maximum length for amplicons in this scheme
-        #[arg(short, long, required = false, default_value = "None")]
+        #[arg(short, long, required = false)]
         expected_len: Option<usize>,
 
         /// Output file name
