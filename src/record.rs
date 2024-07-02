@@ -32,11 +32,11 @@ impl FindAmplicons for FastqRecord {
             .filter(|pair| {
                 self.sequence()
                     .windows(pair.fwd.len())
-                    .any(|window| window == pair.fwd.as_bytes())
+                    .any(|window| window.eq(pair.fwd.as_bytes()))
                     && self
                         .sequence()
                         .windows(pair.rev.len())
-                        .any(|window| window == pair.rev.as_bytes())
+                        .any(|window| window.eq(pair.rev.as_bytes()))
             })
             .collect();
 
