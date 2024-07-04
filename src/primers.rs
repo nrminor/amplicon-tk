@@ -19,14 +19,20 @@ struct PrimerSeq<'a> {
 ///
 #[derive(Debug, new)]
 pub struct PrimerPair<'a> {
-    ///
+    /// The name or label of the amplicon
     pub amplicon: String,
 
-    ///
+    /// The forward primer sequence in 5' to 3' orientation
     pub fwd: &'a str,
 
-    ///
+    /// The reverse complement of the forward primer sequence
+    pub fwd_rc: String,
+
+    /// The reverse primer sequence in 5' to 3' orientation
     pub rev: &'a str,
+
+    /// The reverse complement of the reverse primer sequence
+    pub rev_rc: String,
 }
 
 ///
@@ -54,6 +60,22 @@ pub async fn ref_to_dict(
         })
         .collect();
     Ok(ref_dict)
+}
+
+///
+pub fn get_reverse_complement(sequence: &str) -> String {
+    sequence
+        .chars()
+        .flat_map(|base| match base {
+            'A' => Some('T'),
+            'T' => Some('A'),
+            'G' => Some('C'),
+            'C' => Some('G'),
+            'U' => Some('A'),
+            _ => None,
+        })
+        .rev()
+        .collect::<String>()
 }
 
 /// .
@@ -130,10 +152,14 @@ pub async fn define_amplicons<'a>(
             let rev = rev_hits.first();
 
             if let (Some(fwd), Some(rev)) = (fwd, rev) {
+                let fwd_rc = get_reverse_complement(fwd.primer_seq);
+                let rev_rc = get_reverse_complement(rev.primer_seq);
                 let pair = PrimerPair {
                     amplicon,
                     fwd: fwd.primer_seq,
+                    fwd_rc,
                     rev: rev.primer_seq,
+                    rev_rc,
                 };
                 Some(pair)
             } else {

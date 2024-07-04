@@ -8,19 +8,9 @@
 //! handling (`reads`), individual record-handling `record`, consensus sequence-calling (`consensus`),
 //! the command-line interface (`cli`), and a work-in-progress Python interface.
 
-use std::fs::File;
-
 use amplicon_tk::cli::{self, Commands};
-use amplicon_tk::io::{PrimerReader, RefReader, SeqReader, SeqWriter};
-use amplicon_tk::primers::{define_amplicons, ref_to_dict};
-use amplicon_tk::reads::{Reads, Trimming};
 use clap::Parser;
 use color_eyre::eyre::Result;
-use flate2::Compression;
-use noodles::bed::Reader as BedReader;
-use noodles::fasta::Reader as FaReader;
-use noodles::fastq::io::Writer as FqWriter;
-use noodles::fastq::Reader as FqReader;
 use tracing_subscriber::EnvFilter;
 
 /// .
@@ -35,32 +25,18 @@ async fn main() -> Result<()> {
     let cli = cli::Cli::parse();
     match &cli.command {
         Some(Commands::Trim {
-            input_file,
-            bed_file,
-            fasta_ref,
+            input_file: _,
+            bed_file: _,
+            fasta_ref: _,
             keep_multi: _,
-            left_suffix,
-            right_suffix,
-            min_freq,
-            expected_len,
-            output,
+            left_suffix: _,
+            right_suffix: _,
+            min_freq: _,
+            expected_len: _,
+            output: _,
         }) => {
-            let fastq = FqReader::read_fq(input_file)?;
-            let bed = BedReader::read_bed(bed_file)?;
-            let mut fasta = FaReader::read_ref(fasta_ref)?;
-
-            let ref_dict = ref_to_dict(&mut fasta).await?;
-            let scheme = define_amplicons(bed, &ref_dict, left_suffix, right_suffix).await?;
-
-            let trimmed_reads = Reads::new(fastq, *min_freq, *expected_len)
-                .await
-                .run_trimming(scheme)?;
-
-            let file = File::create(output)?;
-            let encoder = flate2::write::GzEncoder::new(file, Compression::default());
-            let writer = FqWriter::new(encoder);
-
-            writer.write_fq(trimmed_reads)?;
+            eprintln!("{}\n", cli::INFO);
+            eprintln!("Trimming is not yet ready for use, but it will be available soon!")
         }
         Some(Commands::Sort {
             input_file: _,

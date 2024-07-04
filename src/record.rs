@@ -1,4 +1,4 @@
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 //!
 
@@ -7,37 +7,42 @@ use noodles::fastq::Record as FastqRecord;
 
 use crate::primers::PrimerPair;
 
-///
-pub trait FindAmplicons {
+pub trait FindAmplicons<'a, 'b> {
+    ///
+    fn matches_forward(&'a self, pair: &'b PrimerPair<'b>) -> bool;
+
+    ///
+    fn matches_reverse(&'a self, pair: &'b PrimerPair<'b>) -> bool;
+
     /// .
-    fn amplicon<'a>(&'a self, primerpairs: &'a [PrimerPair<'a>]) -> Option<&'a PrimerPair<'a>>;
+    fn amplicon(&'a self, primerpairs: &'b [PrimerPair<'b>]) -> Option<&'b PrimerPair<'b>>;
 }
 
-///
-pub trait Trim<'a> {
-    /// .
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if .
-    fn trim_to_primers(&self, primers: &'a PrimerPair) -> Result<Option<Self>>
-    where
-        Self: Sized;
-}
+impl<'a, 'b> FindAmplicons<'a, 'b> for FastqRecord {
+    fn matches_forward(&'a self, pair: &'b PrimerPair<'b>) -> bool {
+        self.sequence()
+            .windows(pair.fwd.len())
+            .any(|window| window.eq(pair.fwd.as_bytes()))
+            || self
+                .sequence()
+                .windows(pair.fwd.len())
+                .any(|window| window.eq(pair.fwd_rc.as_bytes()))
+    }
 
-impl FindAmplicons for FastqRecord {
-    fn amplicon<'a>(&'a self, primerpairs: &'a [PrimerPair<'a>]) -> Option<&'a PrimerPair<'a>> {
+    fn matches_reverse(&'a self, pair: &'b PrimerPair<'b>) -> bool {
+        self.sequence()
+            .windows(pair.fwd.len())
+            .any(|window| window.eq(pair.rev.as_bytes()))
+            || self
+                .sequence()
+                .windows(pair.fwd.len())
+                .any(|window| window.eq(pair.rev_rc.as_bytes()))
+    }
+
+    fn amplicon(&'a self, primerpairs: &'b [PrimerPair<'b>]) -> Option<&'b PrimerPair<'b>> {
         let amplicon_match: Vec<&PrimerPair> = primerpairs
             .iter()
-            .filter(|pair| {
-                self.sequence()
-                    .windows(pair.fwd.len())
-                    .any(|window| window.eq(pair.fwd.as_bytes()))
-                    && self
-                        .sequence()
-                        .windows(pair.rev.len())
-                        .any(|window| window.eq(pair.rev.as_bytes()))
-            })
+            .filter(|pair| self.matches_forward(pair) && self.matches_reverse(pair))
             .collect();
 
         match amplicon_match.len() {
@@ -47,43 +52,21 @@ impl FindAmplicons for FastqRecord {
     }
 }
 
-impl<'a> Trim<'a> for FastqRecord {
-    fn trim_to_primers(&self, primers: &'a PrimerPair) -> Result<Option<Self>> {
-        let seq_str = std::str::from_utf8(self.sequence())?;
-        match (&seq_str.find(primers.fwd), &seq_str.find(primers.rev)) {
-            (Some(fwd_idx), Some(rev_idx)) => {
-                let new_start = fwd_idx + primers.fwd.len();
-                let new_end = rev_idx;
+pub async fn trim_fq_records<'a, 'b>(
+    record: &'a mut FastqRecord,
+    primers: &'b PrimerPair<'b>,
+) -> Result<Option<&'a FastqRecord>> {
+    let seq_str = std::str::from_utf8(record.sequence())?;
+    match (&seq_str.find(primers.fwd), &seq_str.find(primers.rev)) {
+        (Some(fwd_idx), Some(rev_idx)) => {
+            let new_start = fwd_idx + primers.fwd.len();
+            let new_end = rev_idx;
 
-                let trimmed_record = FastqRecord::new(
-                    self.definition().clone(),
-                    self.sequence()[new_start..*new_end].to_vec(),
-                    self.quality_scores()[new_start..*new_end].to_vec(),
-                );
+            *record.sequence_mut() = record.sequence()[new_start..*new_end].to_vec();
+            *record.quality_scores_mut() = record.quality_scores()[new_start..*new_end].to_vec();
 
-                Ok(Some(trimmed_record))
-            }
-            _ => Ok(None),
+            Ok(Some(record))
         }
+        _ => Ok(None),
     }
 }
-
-// impl<'a> Trim<'a> for FastaRecord {
-//     fn trim_to_primers(&mut self, primers: &'a PrimerPair) -> Result<Option<&Self>> {
-//         let seq_str = std::str::from_utf8(self.sequence().as_ref())?;
-//         match (&seq_str.find(primers.fwd), &seq_str.find(primers.rev)) {
-//             (Some(fwd_idx), Some(rev_idx)) => {
-//                 let new_start = fwd_idx + primers.fwd.len();
-//                 let new_end = rev_idx - primers.rev.len();
-
-//                 let new_seq = Sequence::from(self.sequence().as_ref()[new_start..new_end].to_vec());
-
-//                 let trimmed_record =
-//                     noodles::fasta::Record::new(self.definition().clone(), new_seq);
-
-//                 Ok(Some(trimmed_record))
-//             }
-//             _ => Ok(None),
-//         }
-//     }
-// }

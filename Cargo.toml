@@ -15,13 +15,15 @@ name = "amplicon-tk"
 path = "src/main.rs"
 
 [dependencies]
+async-compression = { version = "0.4.11", features = ["all"] }
+async-trait = "0.1.80"
 clap = { version = "4.4.3", features = ["derive", "cargo"] }
 clap-verbosity-flag = "2.2.0"
 color-eyre = "0.6.3"
 derive-new = "0.6.0"
-flate2 = "1.0.30"
+futures = "0.3.30"
 itertools = "0.12.1"
-noodles = { version = "0.77.0", features = ["fasta", "fastq", "bed", "async"] }
+noodles = { version = "0.77.0", features = ["fasta", "fastq", "bed", "async", "bam", "bgzf", "cram", "sam", "core", "csi"] }
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
 rayon = "1.9.0"
 sccache = "0.8.1"
