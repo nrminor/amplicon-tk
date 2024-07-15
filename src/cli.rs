@@ -38,8 +38,33 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     #[clap(
-        about = "Trim a set of reads down to only those reads that contain a complete amplicon.",
-        aliases = &["tr", "tirm", "trm", "tri", "tm"])]
+        about = "Index FASTQ records and record unique amplicon statistics. Indexing implicitly finds and trims primers before identifying unique amplicon sequences.",
+        aliases = &["id", "ind", "idx", "ix"])]
+    Index {
+        /// Input FASTQ file (optionally compressed with gzip or bgzip)
+        #[arg(short, long, required = true)]
+        input_file: PathBuf,
+
+        /// Input BED file of primer coordinates
+        #[arg(short, long, required = true)]
+        bed_file: PathBuf,
+
+        /// Reference sequence in FASTA format
+        #[arg(short, long, required = true)]
+        fasta_ref: PathBuf,
+
+        /// The suffix used to identify forward primers in the provided BED file
+        #[arg(short, long, required = false, default_value = "_LEFT")]
+        left_suffix: String,
+
+        /// The suffix used to identify reverse primers in the provided BED file
+        #[arg(short, long, required = false, default_value = "_RIGHT")]
+        right_suffix: String,
+    },
+
+    #[clap(
+            about = "Trim a set of reads down to only those reads that contain a complete amplicon.",
+            aliases = &["tr", "tirm", "trm", "tri", "tm"])]
     Trim {
         /// Input FASTQ file (optionally compressed with gzip or bgzip)
         #[arg(short, long, required = true)]
@@ -79,7 +104,7 @@ pub enum Commands {
     },
 
     #[clap(
-            about = "Sort reads representing each amplicon into their own FASTQs, one per amplicon.",
+            about = "Trim and sort reads representing each amplicon into their own FASTQs, one per amplicon. Indexing with `amplicon-tk index` must be performed before sorting.",
             aliases = &["so", "srt", "st", "srot"])]
     Sort {
         /// Input FASTQ file (optionally compressed with gzip or bgzip)
@@ -108,7 +133,7 @@ pub enum Commands {
     },
 
     #[clap(
-            about = "Sort reads representing each amplicon into their own sets, call a consensus sequence for each set, and save it into an output FASTA file.",
+            about = "Trim and sort reads representing each amplicon into their own sets, call a consensus sequence for each set, and save it into an output FASTA file. Indexing with `amplicon-tk index` must be performed before calling consensus amplicons.",
             aliases = &["cons", "co", "cd", "consseq", "cseq", "cnsns"])]
     Consensus {
         /// Input FASTQ file (optionally compressed with gzip or bgzip)

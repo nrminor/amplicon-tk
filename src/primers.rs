@@ -10,6 +10,7 @@ use color_eyre::eyre::Result;
 use derive_new::new;
 use noodles::bed::Reader as BedReader;
 use noodles::fasta::io::Reader as FastaReader;
+use serde::{Deserialize, Serialize};
 
 struct PrimerSeq<'a> {
     primer_name: String,
@@ -17,29 +18,29 @@ struct PrimerSeq<'a> {
 }
 
 ///
-#[derive(Debug, new)]
-pub struct PrimerPair<'a> {
+#[derive(Debug, new, Hash, Serialize, Deserialize, PartialEq)]
+pub struct PrimerPair {
     /// The name or label of the amplicon
     pub amplicon: String,
 
     /// The forward primer sequence in 5' to 3' orientation
-    pub fwd: &'a str,
+    pub fwd: String,
 
     /// The reverse complement of the forward primer sequence
     pub fwd_rc: String,
 
     /// The reverse primer sequence in 5' to 3' orientation
-    pub rev: &'a str,
+    pub rev: String,
 
     /// The reverse complement of the reverse primer sequence
     pub rev_rc: String,
 }
 
 ///
-#[derive(Debug)]
-pub struct AmpliconScheme<'a> {
+#[derive(Debug, Hash, Serialize, Deserialize, PartialEq)]
+pub struct AmpliconScheme {
     ///
-    pub scheme: Vec<PrimerPair<'a>>,
+    pub scheme: Vec<PrimerPair>,
 }
 
 /// .
@@ -63,7 +64,7 @@ pub async fn ref_to_dict(
 }
 
 ///
-pub fn get_reverse_complement(sequence: &str) -> String {
+fn get_reverse_complement(sequence: &str) -> String {
     sequence
         .chars()
         .flat_map(|base| match base {
@@ -78,21 +79,11 @@ pub fn get_reverse_complement(sequence: &str) -> String {
         .collect::<String>()
 }
 
-/// .
 ///
-/// # Panics
-///
-/// Panics if .
-///
-/// # Errors
-///
-/// This function will return an error if .
-pub async fn define_amplicons<'a>(
+async fn collect_primer_seqs(
     mut bed: BedReader<BufReader<File>>,
-    ref_dict: &'a HashMap<Vec<u8>, Vec<u8>>,
-    fwd_suffix: &'a str,
-    rev_suffix: &'a str,
-) -> Result<AmpliconScheme<'a>> {
+    ref_dict: &HashMap<Vec<u8>, Vec<u8>>,
+) -> Result<Vec<PrimerSeq>> {
     let all_primer_seqs: Vec<PrimerSeq> = bed
         .records()
         .filter_map(|record| record.ok())
@@ -116,6 +107,25 @@ pub async fn define_amplicons<'a>(
         })
         .filter_map(|primer_seq| primer_seq.ok())
         .collect();
+    Ok(all_primer_seqs)
+}
+
+/// .
+///
+/// # Panics
+///
+/// Panics if .
+///
+/// # Errors
+///
+/// This function will return an error if .
+pub async fn define_amplicons<'a>(
+    bed: BedReader<BufReader<File>>,
+    ref_dict: &'a HashMap<Vec<u8>, Vec<u8>>,
+    fwd_suffix: &'a str,
+    rev_suffix: &'a str,
+) -> Result<AmpliconScheme> {
+    let all_primer_seqs = collect_primer_seqs(bed, ref_dict).await?;
 
     let amplicons = all_primer_seqs
         .iter()
@@ -156,9 +166,9 @@ pub async fn define_amplicons<'a>(
                 let rev_rc = get_reverse_complement(rev.primer_seq);
                 let pair = PrimerPair {
                     amplicon,
-                    fwd: fwd.primer_seq,
+                    fwd: fwd.primer_seq.to_owned(),
                     fwd_rc,
-                    rev: rev.primer_seq,
+                    rev: rev.primer_seq.to_owned(),
                     rev_rc,
                 };
                 Some(pair)
