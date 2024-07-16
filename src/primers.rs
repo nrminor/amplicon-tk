@@ -1,16 +1,16 @@
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 //!
 
 use std::io::BufReader;
 use std::{collections::HashMap, fs::File};
 
-use color_eyre::eyre::Result;
-
+use color_eyre::eyre::{eyre, Result};
 use derive_new::new;
 use noodles::bed::Reader as BedReader;
 use noodles::fasta::io::Reader as FastaReader;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 struct PrimerSeq<'a> {
     primer_name: String,
@@ -18,8 +18,8 @@ struct PrimerSeq<'a> {
 }
 
 ///
-#[derive(Debug, new, Hash, Serialize, Deserialize, PartialEq)]
-pub struct PrimerPair {
+#[derive(Debug, new, Hash, Serialize, Deserialize, Eq, PartialEq)]
+pub struct PossiblePrimers {
     /// The name or label of the amplicon
     pub amplicon: String,
 
@@ -37,10 +37,28 @@ pub struct PrimerPair {
 }
 
 ///
+#[derive(Debug, new, Hash, Serialize, Deserialize, Eq, PartialEq, Clone)]
+pub struct PrimerPair {
+    pub fwd: String,
+    pub rev: String,
+}
+
+///
 #[derive(Debug, Hash, Serialize, Deserialize, PartialEq)]
 pub struct AmpliconScheme {
     ///
-    pub scheme: Vec<PrimerPair>,
+    pub scheme: Vec<PossiblePrimers>,
+}
+
+impl AmpliconScheme {
+    pub fn hash_amplicon_scheme(&self) -> Result<String> {
+        let encoded_scheme: Vec<u8> = bincode::serialize(self)?;
+        let mut hasher = Sha256::new();
+        hasher.update(&encoded_scheme);
+        let hash = format!("{:?}", hasher.finalize());
+
+        Ok(hash)
+    }
 }
 
 /// .
@@ -93,17 +111,35 @@ async fn collect_primer_seqs(
 
             // define the ref name and start and stop positions
             let ref_name = record.reference_sequence_name().as_bytes().to_owned();
-            let start_pos = record.start_position().get() - 1;
-            let stop_pos = record.end_position().get() - 1;
+            let start_pos = record.start_position().get();
+            let stop_pos = record.end_position().get();
 
             // pull in the sequence from the ref hashmap
-            let primer_seq_bytes = &ref_dict[&ref_name][start_pos..stop_pos];
-            let primer_seq = std::str::from_utf8(primer_seq_bytes)?;
+            let seq = ref_dict.get(&ref_name).unwrap();
+            match stop_pos <= seq.len() {
+                true => {
+                    let primer_seq_bytes = &seq[start_pos..stop_pos];
+                    let primer_seq = std::str::from_utf8(primer_seq_bytes)?;
 
-            Ok(PrimerSeq {
-                primer_name,
-                primer_seq,
-            })
+                    Ok(PrimerSeq {
+                        primer_name,
+                        primer_seq,
+                    })
+                }
+                false => {
+                    eprintln!("{}", seq.len());
+                    let message = format!(
+                        "Positions {} and {} for {} are not present in the reference sequence, {}. The reference sequence is:\n\n{}\n",
+                        &start_pos,
+                        &stop_pos,
+                        &primer_name,
+                        String::from_utf8(ref_name)?,
+                        String::from_utf8(seq.clone())?
+                    );
+                    eprintln!("{}", &message);
+                    Err(eyre!(message))
+                }
+            }
         })
         .filter_map(|primer_seq| primer_seq.ok())
         .collect();
@@ -164,7 +200,7 @@ pub async fn define_amplicons<'a>(
             if let (Some(fwd), Some(rev)) = (fwd, rev) {
                 let fwd_rc = get_reverse_complement(fwd.primer_seq);
                 let rev_rc = get_reverse_complement(rev.primer_seq);
-                let pair = PrimerPair {
+                let pair = PossiblePrimers {
                     amplicon,
                     fwd: fwd.primer_seq.to_owned(),
                     fwd_rc,
@@ -176,7 +212,7 @@ pub async fn define_amplicons<'a>(
                 None
             }
         })
-        .collect::<Vec<PrimerPair>>();
+        .collect::<Vec<PossiblePrimers>>();
 
     Ok(AmpliconScheme { scheme })
 }

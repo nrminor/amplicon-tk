@@ -99,7 +99,7 @@ pub enum Commands {
         expected_len: Option<usize>,
 
         /// Output file name
-        #[arg(short, long, required = false, default_value = "trimmed.fastq.gz")]
+        #[arg(short, long, required = false, default_value = "trimmed")]
         output: String,
     },
 

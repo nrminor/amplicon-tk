@@ -36,6 +36,16 @@ pub enum InputType {
     BAM(Bam),
 }
 
+impl InputType {
+    pub fn extension(&self) -> String {
+        match self {
+            InputType::FASTQGZ(_) => String::from(".fastq.gz"),
+            InputType::FASTQ(_) => String::from(".fastq"),
+            InputType::BAM(_) => String::from(".bam"),
+        }
+    }
+}
+
 pub enum OutputType {
     FASTQGZ(FastqGz),
     FASTQ(Fastq),
