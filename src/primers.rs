@@ -37,10 +37,10 @@ pub struct PossiblePrimers {
 }
 
 ///
-#[derive(Debug, new, Hash, Serialize, Deserialize, Eq, PartialEq, Clone)]
-pub struct PrimerPair {
-    pub fwd: String,
-    pub rev: String,
+#[derive(Debug, Hash, Serialize, Deserialize, Eq, PartialEq, Clone)]
+pub struct AmpliconBounds {
+    pub start: usize,
+    pub stop: usize,
 }
 
 ///

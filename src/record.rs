@@ -2,34 +2,28 @@
 
 //!
 
-use color_eyre::eyre::Result;
 use itertools::Itertools;
 use noodles::fastq::Record as FastqRecord;
+use pretty_assertions::assert_eq;
 
 use crate::{
-    primers::{PossiblePrimers, PrimerPair},
+    primers::{AmpliconBounds, PossiblePrimers},
     reads::FilterSettings,
 };
 
 ///
 pub trait FindAmplicons<'a, 'b> {
     ///
-    fn forward_match(&'a self, pair: &'b PossiblePrimers) -> Option<&'b str>;
-
-    ///
-    fn reverse_match(&'a self, pair: &'b PossiblePrimers) -> Option<&'b str>;
+    fn find_primer_match(&'a self, primer: &'b str, rc_primer: &'b str) -> Option<usize>;
 
     /// .
     fn find_amplicon(
         &'a self,
         primerpairs: &'b [PossiblePrimers],
-    ) -> impl futures::Future<Output = Option<PrimerPair>>;
+    ) -> impl futures::Future<Output = Option<AmpliconBounds>>;
 
     ///
-    fn trim_to_amplicon(
-        self,
-        primers: PrimerPair,
-    ) -> impl futures::Future<Output = Result<Option<Self>>>
+    fn to_bounds(self, bounds: AmpliconBounds) -> impl futures::Future<Output = Self>
     where
         Self: Sized;
 
@@ -41,54 +35,55 @@ pub trait FindAmplicons<'a, 'b> {
 }
 
 impl<'a, 'b> FindAmplicons<'a, 'b> for FastqRecord {
-    fn forward_match(&'a self, pair: &'b PossiblePrimers) -> Option<&'b str> {
-        if self
+    fn find_primer_match(&'a self, primer: &'b str, rc_primer: &'b str) -> Option<usize> {
+        assert_eq!(
+            primer.len(),
+            rc_primer.len(),
+            "Primer length mismatch:\n{}\n{}",
+            primer,
+            rc_primer
+        );
+        let primer_hit = self
             .sequence()
-            .windows(pair.fwd.len())
-            .any(|window| window.eq(pair.fwd.as_bytes()))
-        {
-            Some(&pair.fwd)
-        } else if self
+            .windows(primer.len())
+            .position(|window| window.eq(primer.as_bytes()));
+        let rc_primer_hit = self
             .sequence()
-            .windows(pair.fwd.len())
-            .any(|window| window.eq(pair.fwd_rc.as_bytes()))
-        {
-            Some(&pair.fwd_rc)
-        } else {
-            None
+            .windows(rc_primer.len())
+            .position(|window| window.eq(rc_primer.as_bytes()));
+        match (primer_hit, rc_primer_hit) {
+            (Some(_), Some(_)) => None, // ambiguous case where both a primer and its reverse complement are found, which should be rare
+            (Some(hit), None) => Some(hit),
+            (None, Some(hit)) => Some(hit),
+            (None, None) => None,
         }
     }
 
-    fn reverse_match(&'a self, pair: &'b PossiblePrimers) -> Option<&'b str> {
-        if self
-            .sequence()
-            .windows(pair.rev.len())
-            .any(|window| window.eq(pair.rev.as_bytes()))
-        {
-            Some(&pair.rev)
-        } else if self
-            .sequence()
-            .windows(pair.rev.len())
-            .any(|window| window.eq(pair.rev_rc.as_bytes()))
-        {
-            Some(&pair.rev_rc)
-        } else {
-            None
-        }
-    }
-
-    async fn find_amplicon(&'a self, primerpairs: &'b [PossiblePrimers]) -> Option<PrimerPair> {
-        let mut amplicon_match: Vec<PrimerPair> = primerpairs
+    async fn find_amplicon(&'a self, primerpairs: &'b [PossiblePrimers]) -> Option<AmpliconBounds> {
+        let mut amplicon_match: Vec<AmpliconBounds> = primerpairs
             .iter()
             .filter_map(|pair| {
-                let maybe_fwd = self.forward_match(pair);
-                let maybe_rev = self.reverse_match(pair);
-
+                let maybe_fwd = self.find_primer_match(&pair.fwd, &pair.fwd_rc);
+                let maybe_rev = self.find_primer_match(&pair.rev, &pair.rev_rc);
                 match (maybe_fwd, maybe_rev) {
-                    (Some(fwd), Some(rev)) => Some(PrimerPair {
-                        fwd: fwd.to_string(),
-                        rev: rev.to_string(),
-                    }),
+                    (Some(fwd), Some(rev)) => {
+                        let (amplicon_start, amplicon_stop) = match fwd < rev {
+                            true => (fwd + pair.fwd.len() - 1, rev),
+                            false => (rev + pair.rev.len() - 1, fwd),
+                        };
+                        let amplicon_len = amplicon_stop - amplicon_start;
+                        if amplicon_len > pair.fwd.len()
+                            && amplicon_len > pair.rev.len()
+                            && amplicon_stop != amplicon_start
+                        {
+                            Some(AmpliconBounds {
+                                start: amplicon_start,
+                                stop: amplicon_stop,
+                            })
+                        } else {
+                            None
+                        }
+                    }
                     _ => None,
                 }
             })
@@ -101,24 +96,17 @@ impl<'a, 'b> FindAmplicons<'a, 'b> for FastqRecord {
         }
     }
 
-    async fn trim_to_amplicon(mut self, primers: PrimerPair) -> Result<Option<Self>> {
-        let seq_str = std::str::from_utf8(self.sequence())?;
-        match (&seq_str.find(&primers.fwd), &seq_str.find(&primers.rev)) {
-            (Some(fwd_idx), Some(rev_idx)) => {
-                let new_start = fwd_idx + primers.fwd.len();
-                let new_end = rev_idx;
-
-                if &new_start >= new_end {
-                    return Ok(None);
-                }
-
-                *self.sequence_mut() = self.sequence()[new_start..*new_end].to_vec();
-                *self.quality_scores_mut() = self.quality_scores()[new_start..*new_end].to_vec();
-
-                Ok(Some(self))
-            }
-            _ => Ok(None),
-        }
+    async fn to_bounds(mut self, bounds: AmpliconBounds) -> Self {
+        *self.sequence_mut() = self.sequence()[bounds.start..bounds.stop].to_vec();
+        *self.quality_scores_mut() = self.quality_scores()[bounds.start..bounds.stop].to_vec();
+        assert_eq!(
+            self.sequence().len(),
+            self.quality_scores().len(),
+            "Trimming mistake encountered where the number of bases does not equal the number of quality scores:\n{}\n{}",
+            String::from_utf8(self.sequence().to_vec()).unwrap(),
+            String::from_utf8(self.quality_scores().to_vec()).unwrap(),
+        );
+        self
     }
 
     async fn whether_to_write(&'a self, filters: &'b Option<FilterSettings<'_, '_>>) -> bool {

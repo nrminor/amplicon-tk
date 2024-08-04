@@ -7,22 +7,30 @@
 
 // #![warn(missing_docs)]
 
+use std::io;
 use std::path::Path;
 
 use async_compression::tokio::bufread::GzipDecoder;
 use async_compression::tokio::write::GzipEncoder;
 use color_eyre::eyre::eyre;
 use color_eyre::eyre::Result;
+use futures::Stream;
 use noodles::bam::AsyncReader as BamReader;
 use noodles::bam::AsyncWriter as BamWriter;
+use noodles::bam::Record as BamRecord;
 use noodles::bed::io::Reader as BedReader;
 use noodles::bgzf::AsyncReader as BgzfReader;
 use noodles::bgzf::AsyncWriter as BgzfWriter;
 use noodles::fasta::io::Reader as FastaReader;
 use noodles::fastq::AsyncReader as FastqReader;
 use noodles::fastq::AsyncWriter as FastqWriter;
+use noodles::fastq::Record as FastqRecord;
+use tokio::io::AsyncBufRead;
+use tokio::io::AsyncRead;
+use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufWriter;
+use tokio::sync::MutexGuard;
 use tokio::{fs::File, io::BufReader};
 
 // supported sequencing read formats
@@ -116,6 +124,59 @@ impl SeqReader for Bam {
     }
 }
 
+pub trait RecordParser: Unpin + Sized + 'static {
+    type Record;
+    fn parse_records(&mut self) -> impl Stream<Item = Result<Self::Record, std::io::Error>>;
+}
+
+impl<R> RecordParser for FastqReader<R>
+where
+    R: AsyncBufRead + AsyncRead + Unpin + 'static,
+{
+    type Record = FastqRecord;
+    fn parse_records(&mut self) -> impl Stream<Item = Result<Self::Record, std::io::Error>> {
+        self.records()
+    }
+}
+
+impl<R> RecordParser for BamReader<R>
+where
+    R: AsyncBufRead + AsyncRead + Unpin + 'static,
+{
+    type Record = BamRecord;
+    fn parse_records(&mut self) -> impl Stream<Item = Result<Self::Record, std::io::Error>> {
+        self.records()
+    }
+}
+
+pub trait RecordWrite: Unpin + 'static {
+    type Record;
+    fn write_trimmed(
+        &mut self,
+        record: &Self::Record,
+    ) -> impl futures::Future<Output = io::Result<()>>;
+}
+
+impl<W> RecordWrite for MutexGuard<'static, FastqWriter<W>>
+where
+    W: AsyncWrite + Unpin + 'static,
+{
+    type Record = FastqRecord;
+    async fn write_trimmed(&mut self, record: &Self::Record) -> io::Result<()> {
+        self.write_record(record).await
+    }
+}
+
+// impl<W> RecordWrite for BamWriter<W>
+// where
+//     W: AsyncWrite + Unpin + 'static,
+// {
+//     type Record = BamRecord;
+//     async fn write_trimmed(&mut self, record: &Self::Record) -> io::Result<()> {
+//         self.write_record(record).await
+//     }
+// }
+
 pub trait PrimerReader {
     type Format: PrimerFormat;
     type Reader;
@@ -152,15 +213,20 @@ impl RefReader for Fasta {
 
 pub trait SeqWriter: SupportedFormat {
     type Writer: Unpin + Send;
+    type WriteBuffer: Unpin + Send;
     fn read_writer(
         &self,
         output_file_path: &Path,
     ) -> impl futures::Future<Output = Result<Self::Writer>>;
-    fn finalize_write(&self, writer: Self::Writer) -> impl futures::Future<Output = Result<()>>;
+    fn finalize_write(
+        &self,
+        writer: Self::WriteBuffer,
+    ) -> impl futures::Future<Output = Result<()>>;
 }
 
 impl SeqWriter for FastqGz {
     type Writer = FastqWriter<GzipEncoder<BufWriter<File>>>;
+    type WriteBuffer = GzipEncoder<BufWriter<File>>;
     async fn read_writer(&self, output_file_path: &Path) -> Result<Self::Writer> {
         let output_file = File::create(output_file_path).await?;
         let writer = BufWriter::new(output_file);
@@ -169,8 +235,7 @@ impl SeqWriter for FastqGz {
 
         Ok(fastq_writer)
     }
-    async fn finalize_write(&self, writer: Self::Writer) -> Result<()> {
-        let mut final_contents = writer.into_inner();
+    async fn finalize_write(&self, mut final_contents: Self::WriteBuffer) -> Result<()> {
         final_contents.shutdown().await?;
         Ok(())
     }
@@ -178,6 +243,7 @@ impl SeqWriter for FastqGz {
 
 impl SeqWriter for Fastq {
     type Writer = FastqWriter<BufWriter<File>>;
+    type WriteBuffer = BufWriter<File>;
     async fn read_writer(&self, output_path: &Path) -> Result<Self::Writer> {
         let output_file = File::create(output_path).await?;
         let writer = BufWriter::new(output_file);
@@ -185,8 +251,7 @@ impl SeqWriter for Fastq {
 
         Ok(fastq_writer)
     }
-    async fn finalize_write(&self, writer: Self::Writer) -> Result<()> {
-        let mut final_contents = writer.into_inner();
+    async fn finalize_write(&self, mut final_contents: Self::WriteBuffer) -> Result<()> {
         final_contents.flush().await?;
         Ok(())
     }
@@ -194,14 +259,14 @@ impl SeqWriter for Fastq {
 
 impl SeqWriter for Bam {
     type Writer = BamWriter<BgzfWriter<File>>;
+    type WriteBuffer = BgzfWriter<File>;
     async fn read_writer(&self, output_path: &Path) -> Result<Self::Writer> {
         let output_file = File::create(output_path).await?;
         let bam_writer = BamWriter::new(output_file);
 
         Ok(bam_writer)
     }
-    async fn finalize_write(&self, writer: Self::Writer) -> Result<()> {
-        let mut final_contents = writer.into_inner();
+    async fn finalize_write(&self, mut final_contents: Self::WriteBuffer) -> Result<()> {
         final_contents.shutdown().await?;
         Ok(())
     }

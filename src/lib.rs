@@ -8,3 +8,4 @@ pub mod py_api;
 pub mod r_api;
 pub mod reads;
 pub mod record;
+pub mod scratch;

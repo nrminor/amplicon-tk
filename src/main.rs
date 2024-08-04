@@ -8,12 +8,13 @@
 //! handling (`reads`), individual record-handling `record`, consensus sequence-calling
 //! (`consensus`), the command-line interface (`cli`), and a work-in-progress Python interface.
 
-use std::{fs::File, path::PathBuf};
+use std::{fs::File, path::PathBuf, sync::Arc};
 
+#[allow(unused_imports)]
 use amplicon_tk::{
     cli::{self, Commands},
     index::Index,
-    io::{io_selector, Bed, Fasta, InputType, PrimerReader, RefReader},
+    io::{io_selector, Bed, Fasta, InputType, PrimerReader, RefReader, SeqReader},
     primers::{define_amplicons, ref_to_dict},
     reads::{FilterSettings, Trimming},
 };
@@ -102,11 +103,12 @@ async fn main() -> Result<()> {
 
             // hash the current primer scheme to compare with a potential index
             let current_hash = scheme.hash_amplicon_scheme()?;
+            let _safe_scheme = Arc::from(scheme);
 
             // define input and output types for the reads
             let input_type = io_selector(input_file).await?;
             let output_name = format!("{}{}", output, input_type.extension());
-            let output_path = PathBuf::from(output_name);
+            let _output_path = PathBuf::from(output_name);
             // still need to work out how to select different input and output types
 
             // based on the file type, run lazy, asynchronous trimming with the appropriate record type
@@ -118,18 +120,25 @@ async fn main() -> Result<()> {
                     // bundle the requested filter settings. These settings will be None if no unique sequences
                     // could be retrieved from the index
                     let filters = FilterSettings::new(min_freq, expected_len, &unique_seqs);
+                    let _safe_filters = Arc::from(filters);
+
+                    // load an appropriate reader
+                    let mut _reader = supported_type.read_reads(input_file).await?;
 
                     // perform trimming based on the supported type
-                    supported_type
-                        .trim(input_file, &output_path, scheme, filters)
-                        .await?
+                    todo!()
+                    // supported_type
+                    //     .trim(input_file, &output_path, safe_scheme, safe_filters)
+                    //     .await?
                 }
                 InputType::FASTQ(supported_type) => {
                     let unique_seqs = supported_type.load_index(input_file, &current_hash)?;
                     let filters = FilterSettings::new(min_freq, expected_len, &unique_seqs);
-                    supported_type
-                        .trim(input_file, &output_path, scheme, filters)
-                        .await?
+                    let _safe_filters = Arc::from(filters);
+                    todo!();
+                    // supported_type
+                    //     .trim(input_file, &output_path, safe_scheme, safe_filters)
+                    //     .await?
                 }
                 InputType::BAM(_supported_type) => {
                     eprintln!("Unaligned BAM inputs are not yet supported but will be soon!")
