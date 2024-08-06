@@ -12,26 +12,20 @@ use std::path::Path;
 
 use async_compression::tokio::bufread::GzipDecoder;
 use async_compression::tokio::write::GzipEncoder;
-use color_eyre::eyre::eyre;
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
 use futures::Stream;
-use noodles::bam::AsyncReader as BamReader;
-use noodles::bam::AsyncWriter as BamWriter;
-use noodles::bam::Record as BamRecord;
-use noodles::bed::io::Reader as BedReader;
-use noodles::bgzf::AsyncReader as BgzfReader;
-use noodles::bgzf::AsyncWriter as BgzfWriter;
-use noodles::fasta::io::Reader as FastaReader;
-use noodles::fastq::AsyncReader as FastqReader;
-use noodles::fastq::AsyncWriter as FastqWriter;
-use noodles::fastq::Record as FastqRecord;
-use tokio::io::AsyncBufRead;
-use tokio::io::AsyncRead;
-use tokio::io::AsyncWrite;
-use tokio::io::AsyncWriteExt;
-use tokio::io::BufWriter;
-use tokio::sync::MutexGuard;
-use tokio::{fs::File, io::BufReader};
+use noodles::{
+    bam::{AsyncReader as BamReader, AsyncWriter as BamWriter, Record as BamRecord},
+    bed::io::Reader as BedReader,
+    bgzf::{AsyncReader as BgzfReader, AsyncWriter as BgzfWriter},
+    fasta::io::Reader as FastaReader,
+    fastq::{AsyncReader as FastqReader, AsyncWriter as FastqWriter, Record as FastqRecord},
+};
+use tokio::{
+    fs::File,
+    io::{AsyncBufRead, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, BufWriter},
+    sync::MutexGuard,
+};
 
 // supported sequencing read formats
 pub struct FastqGz;

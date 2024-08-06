@@ -8,10 +8,11 @@ use std::{collections::HashMap, fs::File, io::BufReader};
 
 use color_eyre::eyre::Result;
 
-use crate::amplicons::AmpliconScheme;
-use crate::io::FastqGz;
-use crate::io::{Fastq, SupportedFormat};
-use crate::reads::sync_trimming;
+use crate::{
+    amplicons::AmpliconScheme,
+    io::{Fastq, FastqGz, SupportedFormat},
+    reads::sync_trimming,
+};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct IndexFormat {
