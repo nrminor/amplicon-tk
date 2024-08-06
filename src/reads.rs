@@ -8,53 +8,19 @@ use futures::{future::join_all, Future};
 use noodles::fastq::AsyncWriter as FastqWriter;
 use noodles::fastq::Record as FastqRecord;
 use std::mem;
+use std::path::Path;
 use std::sync::Arc;
-use std::{collections::HashMap, path::Path};
-use tokio::fs::File;
-use tokio::io::BufWriter;
-use tokio::sync::Mutex;
+use tokio::{fs::File, io::BufWriter, sync::Mutex};
 use tracing::info;
 
+use crate::filtering::FilterSettings;
 use crate::io::RecordParser;
 use crate::{
+    amplicons::AmpliconScheme,
     io::{Fastq, FastqGz, SeqWriter, SupportedFormat},
-    primers::AmpliconScheme,
     record::FindAmplicons,
 };
 use color_eyre::eyre::Result;
-
-pub struct FilterSettings<'a, 'b> {
-    pub min_freq: &'a f64,
-    pub max_len: &'a usize,
-    pub unique_seqs: &'b HashMap<Vec<u8>, f64>,
-}
-
-impl<'a, 'b> FilterSettings<'a, 'b> {
-    pub fn new(
-        min_freq: &'a Option<f64>,
-        max_len: &'a Option<usize>,
-        unique_seqs: &'b Option<HashMap<Vec<u8>, f64>>,
-    ) -> Option<FilterSettings<'a, 'b>> {
-        match (min_freq, max_len, unique_seqs) {
-            (Some(min_freq), Some(max_len), Some(unique_seqs)) => Some(FilterSettings {
-                min_freq,
-                max_len,
-                unique_seqs,
-            }),
-            (Some(min_freq), None, Some(unique_seqs)) => Some(FilterSettings {
-                min_freq,
-                max_len: &123456789,
-                unique_seqs,
-            }),
-            (None, Some(max_len), Some(unique_seqs)) => Some(FilterSettings {
-                min_freq: &0.0,
-                max_len,
-                unique_seqs,
-            }),
-            (_, _, _) => None,
-        }
-    }
-}
 
 pub trait Trimming<R, W>: SupportedFormat {
     fn trim(

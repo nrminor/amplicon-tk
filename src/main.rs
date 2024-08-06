@@ -10,13 +10,14 @@
 
 use std::{fs::File, path::PathBuf, sync::Arc};
 
+use amplicon_tk::filtering::FilterSettings;
 #[allow(unused_imports)]
 use amplicon_tk::{
+    amplicons::{define_amplicons, ref_to_dict},
     cli::{self, Commands},
     index::Index,
     io::{io_selector, Bed, Fasta, InputType, PrimerReader, RefReader, SeqReader},
-    primers::{define_amplicons, ref_to_dict},
-    reads::{FilterSettings, Trimming},
+    reads::Trimming,
 };
 use clap::Parser;
 use color_eyre::eyre::Result;

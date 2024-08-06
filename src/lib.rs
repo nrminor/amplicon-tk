@@ -1,11 +1,12 @@
 // #![warn(missing_docs)]
 
+pub mod amplicons;
 pub mod cli;
+pub mod filtering;
 pub mod index;
 pub mod io;
-pub mod primers;
-pub mod py_api;
-pub mod r_api;
+pub mod prelude;
 pub mod reads;
 pub mod record;
 pub mod scratch;
+pub mod trimming;

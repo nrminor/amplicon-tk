@@ -7,8 +7,8 @@ use noodles::fastq::Record as FastqRecord;
 use pretty_assertions::assert_eq;
 
 use crate::{
-    primers::{AmpliconBounds, PossiblePrimers},
-    reads::FilterSettings,
+    amplicons::{AmpliconBounds, PossiblePrimers},
+    filtering::FilterSettings,
 };
 
 ///

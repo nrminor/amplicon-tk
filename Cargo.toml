@@ -46,6 +46,7 @@ serde_cbor = "0.11.2"
 bincode = "1.3.3"
 flate2 = "1.0.30"
 pretty_assertions = "1"
+pin-project-lite = "0.2.14"
 
 [dev-dependencies]
 pretty_assertions = "1"
