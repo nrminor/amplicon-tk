@@ -57,7 +57,8 @@ pub enum OutputType {
 // supported input primer and reference formats
 pub struct Bed;
 pub struct Fasta;
-pub struct Genbank;
+pub struct Tsv;
+pub struct Csv;
 
 pub enum PrimerType {
     BED,
@@ -71,6 +72,9 @@ impl SupportedFormat for Bam {}
 
 pub trait PrimerFormat {}
 impl PrimerFormat for Bed {}
+impl PrimerFormat for Fasta {}
+impl PrimerFormat for Tsv {}
+impl PrimerFormat for Csv {}
 
 pub trait RefFormat {}
 impl RefFormat for Fasta {}
@@ -78,13 +82,16 @@ impl RefFormat for Fasta {}
 pub trait SeqReader {
     type Format: SupportedFormat;
     type Reader: Unpin + Send;
-    fn read_reads(&self, input_path: &Path) -> impl futures::Future<Output = Result<Self::Reader>>;
+    fn read_seq_reads(
+        &self,
+        input_path: &Path,
+    ) -> impl futures::Future<Output = Result<Self::Reader>>;
 }
 
 impl SeqReader for FastqGz {
     type Format = FastqGz;
     type Reader = FastqReader<BufReader<GzipDecoder<BufReader<File>>>>;
-    async fn read_reads(&self, input_path: &Path) -> Result<Self::Reader> {
+    async fn read_seq_reads(&self, input_path: &Path) -> Result<Self::Reader> {
         let input_file = File::open(input_path).await?;
         let reader = BufReader::new(input_file);
         let decoder = GzipDecoder::new(reader);
@@ -98,7 +105,7 @@ impl SeqReader for FastqGz {
 impl SeqReader for Fastq {
     type Format = Fastq;
     type Reader = FastqReader<BufReader<File>>;
-    async fn read_reads(&self, input_path: &Path) -> Result<Self::Reader> {
+    async fn read_seq_reads(&self, input_path: &Path) -> Result<Self::Reader> {
         let input_file = File::open(input_path).await?;
         let reader = BufReader::new(input_file);
         let fastq = FastqReader::new(reader);
@@ -110,7 +117,7 @@ impl SeqReader for Fastq {
 impl SeqReader for Bam {
     type Format = Bam;
     type Reader = BamReader<BgzfReader<File>>;
-    async fn read_reads(&self, input_path: &Path) -> Result<Self::Reader> {
+    async fn read_seq_reads(&self, input_path: &Path) -> Result<Self::Reader> {
         let input_file = File::open(input_path).await?;
         let bam = BamReader::new(input_file);
 
@@ -174,13 +181,13 @@ where
 pub trait PrimerReader {
     type Format: PrimerFormat;
     type Reader;
-    fn read_primers(&self, input_path: &Path) -> Result<Self::Reader>;
+    fn read_primers(input_path: &Path) -> Result<Self::Reader>;
 }
 
 impl PrimerReader for Bed {
-    type Format = Bed;
+    type Format = Self;
     type Reader = BedReader<std::io::BufReader<std::fs::File>>;
-    fn read_primers(&self, input_path: &Path) -> Result<Self::Reader> {
+    fn read_primers(input_path: &Path) -> Result<Self::Reader> {
         let reader = std::fs::File::open(input_path)
             .map(std::io::BufReader::new)
             .map(noodles::bed::io::Reader::new)?;
@@ -189,14 +196,50 @@ impl PrimerReader for Bed {
     }
 }
 
+impl PrimerReader for Fasta {
+    type Format = Self;
+    type Reader = FastaReader<std::io::BufReader<std::fs::File>>;
+    fn read_primers(input_path: &Path) -> Result<Self::Reader> {
+        let reader = std::fs::File::open(input_path)
+            .map(std::io::BufReader::new)
+            .map(noodles::fasta::io::Reader::new)?;
+
+        Ok(reader)
+    }
+}
+
+impl PrimerReader for Tsv {
+    type Format = Self;
+    type Reader = csv::Reader<std::io::BufReader<std::fs::File>>;
+    fn read_primers(input_path: &Path) -> Result<Self::Reader> {
+        let reader = std::fs::File::open(input_path).map(std::io::BufReader::new)?;
+        let tsv_parser = csv::ReaderBuilder::new()
+            .has_headers(false)
+            .delimiter(b'\t')
+            .from_reader(reader);
+        Ok(tsv_parser)
+    }
+}
+
+impl PrimerReader for Csv {
+    type Format = Self;
+    type Reader = csv::Reader<std::io::BufReader<std::fs::File>>;
+    fn read_primers(input_path: &Path) -> Result<Self::Reader> {
+        let reader = std::fs::File::open(input_path)
+            .map(std::io::BufReader::new)
+            .map(csv::Reader::from_reader)?;
+        Ok(reader)
+    }
+}
+
 pub trait RefReader: RefFormat {
     type Reader;
-    fn read_ref(&self, input_path: &Path) -> Result<Self::Reader>;
+    fn read_ref(input_path: &Path) -> Result<Self::Reader>;
 }
 
 impl RefReader for Fasta {
     type Reader = FastaReader<std::io::BufReader<std::fs::File>>;
-    fn read_ref(&self, input_path: &Path) -> Result<Self::Reader> {
+    fn read_ref(input_path: &Path) -> Result<Self::Reader> {
         let reader = std::fs::File::open(input_path)
             .map(std::io::BufReader::new)
             .map(noodles::fasta::io::Reader::new)?;
@@ -301,7 +344,7 @@ impl Init for FastqGz {
     where
         Self: std::marker::Sized,
     {
-        let reader = self.read_reads(input_path).await?;
+        let reader = self.read_seq_reads(input_path).await?;
         Ok((reader, self))
     }
 }
@@ -312,7 +355,7 @@ impl Init for Fastq {
     where
         Self: std::marker::Sized,
     {
-        let reader = self.read_reads(input_path).await?;
+        let reader = self.read_seq_reads(input_path).await?;
         Ok((reader, self))
     }
 }

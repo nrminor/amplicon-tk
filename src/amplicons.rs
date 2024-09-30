@@ -146,6 +146,79 @@ async fn collect_primer_seqs(
     Ok(all_primer_seqs)
 }
 
+pub trait DefineAmplicons {
+    fn define_amplicons<'a>(
+        self,
+        ref_dict: &'a HashMap<Vec<u8>, Vec<u8>>,
+        fwd_suffix: &'a str,
+        rev_suffix: &'a str,
+    ) -> impl futures::Future<Output = Result<AmpliconScheme>>;
+}
+
+impl DefineAmplicons for BedReader<BufReader<File>> {
+    async fn define_amplicons<'a>(
+        self,
+        ref_dict: &'a HashMap<Vec<u8>, Vec<u8>>,
+        fwd_suffix: &'a str,
+        rev_suffix: &'a str,
+    ) -> Result<AmpliconScheme> {
+        let all_primer_seqs = collect_primer_seqs(self, ref_dict).await?;
+
+        let amplicons = all_primer_seqs
+            .iter()
+            .map(|primer_seq| {
+                primer_seq
+                    .primer_name
+                    .replace(fwd_suffix, "")
+                    .replace(rev_suffix, "")
+            })
+            .collect::<Vec<String>>();
+
+        let scheme = amplicons
+            .into_iter()
+            .filter_map(|amplicon| {
+                let primers = all_primer_seqs
+                    .iter()
+                    .filter(|primer| primer.primer_name.contains(&amplicon))
+                    .collect::<Vec<&PrimerSeq>>();
+
+                if primers.len() != 2 {
+                    return None;
+                }
+
+                let fwd_hits = primers
+                    .iter()
+                    .filter(|primer| primer.primer_name.contains(fwd_suffix))
+                    .collect::<Vec<&&PrimerSeq>>();
+                let fwd = fwd_hits.first();
+
+                let rev_hits = primers
+                    .iter()
+                    .filter(|primer| primer.primer_name.contains(rev_suffix))
+                    .collect::<Vec<&&PrimerSeq>>();
+                let rev = rev_hits.first();
+
+                if let (Some(fwd), Some(rev)) = (fwd, rev) {
+                    let fwd_rc = get_reverse_complement(fwd.primer_seq);
+                    let rev_rc = get_reverse_complement(rev.primer_seq);
+                    let pair = PossiblePrimers {
+                        amplicon,
+                        fwd: fwd.primer_seq.to_owned(),
+                        fwd_rc,
+                        rev: rev.primer_seq.to_owned(),
+                        rev_rc,
+                    };
+                    Some(pair)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<PossiblePrimers>>();
+
+        Ok(AmpliconScheme { scheme })
+    }
+}
+
 /// .
 ///
 /// # Panics

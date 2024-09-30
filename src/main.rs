@@ -10,7 +10,6 @@
 
 use std::{fs::File, path::PathBuf, sync::Arc};
 
-use amplicon_tk::filtering::FilterSettings;
 #[allow(unused_imports)]
 use amplicon_tk::{
     amplicons::{define_amplicons, ref_to_dict},
@@ -19,9 +18,18 @@ use amplicon_tk::{
     io::{io_selector, Bed, Fasta, InputType, PrimerReader, RefReader, SeqReader},
     reads::Trimming,
 };
+use amplicon_tk::{
+    amplicons::{AmpliconScheme, DefineAmplicons},
+    filtering::FilterSettings,
+    io::Tsv,
+};
 use clap::Parser;
-use color_eyre::eyre::Result;
+use color_eyre::{
+    eyre::{eyre, Result},
+    owo_colors::OwoColorize,
+};
 use flate2::bufread::GzDecoder;
+use pyo3::exceptions::PyArithmeticError;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -34,49 +42,53 @@ async fn main() -> Result<()> {
     let cli = cli::Cli::parse();
     match &cli.command {
         Some(Commands::Index {
+            input_file: _,
+            bed_file: _,
+            fasta_ref: _,
+            left_suffix: _,
+            right_suffix: _,
+        }) => {
+            todo!()
+        }
+        Some(Commands::Extract {
             input_file,
             bed_file,
             fasta_ref,
+            primer_fasta,
+            primer_table,
             left_suffix,
             right_suffix,
+            output,
+            demux,
         }) => {
-            // defining input and output types for the reads
+            // initialize the primer scheme given the provided input files
+            let _scheme = if let (Some(bed), Some(fasta)) = (bed_file, fasta_ref) {
+                let primers = Bed::read_primers(bed)?;
+                let mut parsed_ref = Fasta::read_ref(fasta)?;
+                let ref_dict = ref_to_dict(&mut parsed_ref).await?;
+                primers
+                    .define_amplicons(&ref_dict, left_suffix, right_suffix)
+                    .await
+            } else if let (Some(fasta), Some(tsv)) = (primer_fasta, primer_table) {
+                let mut primer_seqs = Fasta::read_primers(fasta)?;
+                let _seq_dict = ref_to_dict(&mut primer_seqs).await?;
+                let _parsed_tsv = Tsv::read_primers(tsv)?;
+                todo!()
+            } else {
+                Err(eyre!("Either `--bed_file` and `--fasta_ref` or `--primer_fasta` and `--primer_table` must be provided. Please double check that one of those pairs of arguments were specified before trying again."))
+            }?;
+
+            // define input and output types for the reads
             let input_type = io_selector(input_file).await?;
+            let output_name = format!("{}{}", output, input_type.extension());
+            let _output_path = PathBuf::from(output_name);
 
-            // pulling in the primers
-            let primer_type = Bed;
-            let bed = primer_type.read_primers(bed_file)?;
-
-            // pulling in the reference
-            let ref_type = Fasta;
-            let mut fasta = ref_type.read_ref(fasta_ref)?;
-
-            // convert the reference to a hashmap and use it to pull in the primer pairs for each
-            // amplicon
-            let ref_dict = ref_to_dict(&mut fasta).await?;
-            let scheme = define_amplicons(bed, &ref_dict, left_suffix, right_suffix).await?;
-
-            // based on the input filetype, open, decode, and parse the sequence read records
-            // lazily and use them to create an index
+            // Use pattern-matching to handle the input based on what type it is
             match input_type {
-                InputType::FASTQGZ(supported_type) => {
-                    let opened_file = File::open(input_file)?;
-                    let buffer_raw = std::io::BufReader::new(opened_file);
-                    let decoded = GzDecoder::new(buffer_raw);
-                    let decoded_buffer = std::io::BufReader::new(decoded);
-                    let reader = noodles::fastq::Reader::new(decoded_buffer);
-                    supported_type.index(reader, scheme, input_file).await?;
-                }
-                InputType::FASTQ(supported_type) => {
-                    let opened_file = File::open(input_file)?;
-                    let buffer = std::io::BufReader::new(opened_file);
-                    let reader = noodles::fastq::Reader::new(buffer);
-                    supported_type.index(reader, scheme, input_file).await?;
-                }
-                InputType::BAM(_supported_type) => {
-                    eprintln!("Unaligned BAM inputs are not yet supported but will be soon!")
-                }
-            };
+                InputType::FASTQGZ(_) => todo!(),
+                InputType::FASTQ(_) => todo!(),
+                InputType::BAM(_) => todo!(),
+            }
         }
         Some(Commands::Trim {
             input_file,
@@ -90,12 +102,10 @@ async fn main() -> Result<()> {
             output,
         }) => {
             // pull in the primers
-            let primer_type = Bed;
-            let bed = primer_type.read_primers(bed_file)?;
+            let bed = Bed::read_primers(bed_file)?;
 
             // pull in the reference
-            let ref_type = Fasta;
-            let mut fasta = ref_type.read_ref(fasta_ref)?;
+            let mut fasta = Fasta::read_ref(fasta_ref)?;
 
             // convert the reference to a hashmap and use it to pull in the primer pairs for each
             // amplicon
@@ -124,7 +134,7 @@ async fn main() -> Result<()> {
                     let _safe_filters = Arc::from(filters);
 
                     // load an appropriate reader
-                    let mut _reader = supported_type.read_reads(input_file).await?;
+                    let mut _reader = supported_type.read_seq_reads(input_file).await?;
 
                     // perform trimming based on the supported type
                     todo!()
@@ -178,14 +188,14 @@ async fn main() -> Result<()> {
 }
 
 fn setup() -> Result<()> {
-    if std::env::var("RUST_LIB_BACKTRACE").is_err() {
-        std::env::set_var("RUST_LIB_BACKTRACE", "1")
-    }
-    color_eyre::install()?;
+    // if std::env::var("RUST_LIB_BACKTRACE").is_err() {
+    //     std::env::set_var("RUST_LIB_BACKTRACE", "1")
+    // }
+    // color_eyre::install()?;
 
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info")
-    }
+    // if std::env::var("RUST_LOG").is_err() {
+    //     std::env::set_var("RUST_LOG", "info")
+    // }
     tracing_subscriber::fmt::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .init();

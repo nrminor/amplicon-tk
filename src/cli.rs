@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use bincode::Options;
 use clap::{Parser, Subcommand};
 
 pub const INFO: &str = r"
@@ -63,6 +64,48 @@ pub enum Commands {
     },
 
     #[clap(
+        about = "Extract only those reads that represent complete amplicons, optionally demultiplexing into separate files. Use this subcommand when you want to filter or sort to amplicons without trimming off ends containing primers/barcodes.",
+        aliases = &["x", "xtr", "extra", "demux", "demultiplex", "d"]
+    )]
+    Extract {
+        /// Input FASTQ, gzipped FASTQ, or BAM file to query for amplicons.
+        #[arg(short, long, required = true)]
+        input_file: PathBuf,
+
+        /// Input BED file of primer coordinates
+        #[arg(short, long, required = false)]
+        bed_file: Option<PathBuf>,
+
+        /// Reference sequence in FASTA format. Required if a primer bed was provided.
+        #[arg(short, long, required = false)]
+        fasta_ref: Option<PathBuf>,
+
+        /// FASTA file of primer sequences and labels.
+        #[arg(short = 'f', long, required = false)]
+        primer_fasta: Option<PathBuf>,
+
+        /// Tab-delimited text file pairing up primers. Required if a primer FASTA was provided instead of a primer BED.
+        #[arg(short = 't', long, required = false)]
+        primer_table: Option<PathBuf>,
+
+        /// The suffix used to identify forward primers in the provided BED file
+        #[arg(short, long, required = false, default_value = "_LEFT")]
+        left_suffix: String,
+
+        /// The suffix used to identify reverse primers in the provided BED file
+        #[arg(short, long, required = false, default_value = "_RIGHT")]
+        right_suffix: String,
+
+        /// Output file name
+        #[arg(short, long, required = false, default_value = "extracted_amplicons")]
+        output: String,
+
+        /// Whether to demultiplex each amplicon/barcode pair into its own output file.
+        #[arg(short, long, required = false, default_value_t = false)]
+        demux: bool,
+    },
+
+    #[clap(
             about = "Trim a set of reads down to only those reads that contain a complete amplicon.",
             aliases = &["tr", "tirm", "trm", "tri", "tm"])]
     Trim {
@@ -74,10 +117,17 @@ pub enum Commands {
         #[arg(short, long, required = false)]
         bed_file: PathBuf,
 
-        /// Reference sequence in FASTA format
+        /// Reference sequence in FASTA format. Required if a primer bed was provided.
         #[arg(short, long, required = false)]
         fasta_ref: PathBuf,
 
+        // /// FASTA file of primer sequences and labels.
+        // #[arg(short = "f", long, required = false)]
+        // primer_fasta: PathBuf,
+
+        // /// Tab-delimited text file pairing up primers. Required if a primer FASTA was provided instead of a primer BED.
+        // #[arg(short = "t", long, required = false)]
+        // primer_table: PathBuf,
         /// Whether to keep reads that contain multiple pairs of primers
         #[arg(short, long, required = false, default_value_t = false)]
         keep_multi: bool,
