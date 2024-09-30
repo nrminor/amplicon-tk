@@ -13,14 +13,14 @@ pub const INFO: &str = r"
 |  |  ||   |   ||  |  |     | |  \     ||     ||  |  |         |  |  |  .  |
 |__|__||___|___||__|  |_____||____\____| \___/ |__|__|         |__|  |__|\_|
 
-ampliton-tk: A Command Line and Python Interface for Amplicon-Aware FASTQ Operations
+amplicon-tk: A Command Line and Python Interface for Amplicon-Aware FASTQ Operations
 ====================================================================================
 
-amplicon-tk implements three subcommands—trim, sort, and consensus—that, unlike many
-other tools, are amplicon-aware. By that, we mean that amplicon-tk enforces a simple rule:
-any given read must contain both primers in at least one amplicon. This ensures that all
-reads in the resulting dataset will correspond to one, complete amplicon, meaning that PCR
-chimeras and other artifacts will be removed.
+amplicon-tk implements a series of helpful subcommands that, unlike many other tools, are
+amplicon-aware. By that, we mean that amplicon-tk enforces a simple rule: any given read
+must contain both primers in at least one amplicon. This ensures that all reads in the
+resulting dataset will correspond to one, complete amplicon, meaning that PCR chimeras
+and other artifacts will be removed.
 
 ";
 
@@ -39,7 +39,8 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     #[clap(
-        about = "Index FASTQ records and record unique amplicon statistics. Indexing implicitly finds and trims primers before identifying unique amplicon sequences.",
+        about = "Index FASTQ records and record unique amplicon statistics. Indexing implicitly \
+        finds and trims primers before identifying unique amplicon sequences.",
         aliases = &["id", "ind", "idx", "ix"])]
     Index {
         /// Input FASTQ file (optionally compressed with gzip or bgzip)
@@ -64,7 +65,9 @@ pub enum Commands {
     },
 
     #[clap(
-        about = "Extract only those reads that represent complete amplicons, optionally demultiplexing into separate files. Use this subcommand when you want to filter or sort to amplicons without trimming off ends containing primers/barcodes.",
+        about = "Extract only those reads that represent complete amplicons, optionally demultiplexing \
+        into separate files. Use this subcommand when you want to filter or sort to amplicons without \
+        trimming off ends containing primers/barcodes.",
         aliases = &["x", "xtr", "extra", "demux", "demultiplex", "d"]
     )]
     Extract {
@@ -154,7 +157,8 @@ pub enum Commands {
     },
 
     #[clap(
-            about = "Trim and sort reads representing each amplicon into their own FASTQs, one per amplicon. Indexing with `amplicon-tk index` must be performed before sorting.",
+            about = "Trim and sort reads representing each amplicon into their own FASTQs, one per amplicon. \
+            Indexing with `amplicon-tk index` must be performed before sorting.",
             aliases = &["so", "srt", "st", "srot"])]
     Sort {
         /// Input FASTQ file (optionally compressed with gzip or bgzip)
@@ -183,7 +187,9 @@ pub enum Commands {
     },
 
     #[clap(
-            about = "Trim and sort reads representing each amplicon into their own sets, call a consensus sequence for each set, and save it into an output FASTA file. Indexing with `amplicon-tk index` must be performed before calling consensus amplicons.",
+            about = "Trim and sort reads representing each amplicon into their own sets, call a consensus \
+            sequence for each set, and save it into an output FASTA file. Indexing with `amplicon-tk index` \
+            must be performed before calling consensus amplicons.",
             aliases = &["cons", "co", "cd", "consseq", "cseq", "cnsns"])]
     Consensus {
         /// Input FASTQ file (optionally compressed with gzip or bgzip)
