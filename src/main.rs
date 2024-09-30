@@ -8,8 +8,9 @@
 //! handling (`reads`), individual record-handling `record`, consensus sequence-calling
 //! (`consensus`), the command-line interface (`cli`), and a work-in-progress Python interface.
 
-use std::{fs::File, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
+use amplicon_tk::{amplicons::DefineAmplicons, filtering::FilterSettings, io::Tsv};
 #[allow(unused_imports)]
 use amplicon_tk::{
     amplicons::{define_amplicons, ref_to_dict},
@@ -18,18 +19,8 @@ use amplicon_tk::{
     io::{io_selector, Bed, Fasta, InputType, PrimerReader, RefReader, SeqReader},
     reads::Trimming,
 };
-use amplicon_tk::{
-    amplicons::{AmpliconScheme, DefineAmplicons},
-    filtering::FilterSettings,
-    io::Tsv,
-};
 use clap::Parser;
-use color_eyre::{
-    eyre::{eyre, Result},
-    owo_colors::OwoColorize,
-};
-use flate2::bufread::GzDecoder;
-use pyo3::exceptions::PyArithmeticError;
+use color_eyre::eyre::{eyre, Result};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -75,7 +66,12 @@ async fn main() -> Result<()> {
                 let _parsed_tsv = Tsv::read_primers(tsv)?;
                 todo!()
             } else {
-                Err(eyre!("Either `--bed_file` and `--fasta_ref` or `--primer_fasta` and `--primer_table` must be provided. Please double check that one of those pairs of arguments were specified before trying again."))
+                Err(eyre!(
+                    "
+                    Either `--bed_file` and `--fasta_ref` or `--primer_fasta` and `--primer_table` \
+                    must be provided. Please double check that one of those pairs of arguments were \
+                    specified before trying again."
+                ))
             }?;
 
             // define input and output types for the reads
@@ -188,14 +184,14 @@ async fn main() -> Result<()> {
 }
 
 fn setup() -> Result<()> {
-    // if std::env::var("RUST_LIB_BACKTRACE").is_err() {
-    //     std::env::set_var("RUST_LIB_BACKTRACE", "1")
-    // }
-    // color_eyre::install()?;
+    if std::env::var("RUST_LIB_BACKTRACE").is_err() {
+        unsafe { std::env::set_var("RUST_LIB_BACKTRACE", "1") }
+    }
+    color_eyre::install()?;
 
-    // if std::env::var("RUST_LOG").is_err() {
-    //     std::env::set_var("RUST_LOG", "info")
-    // }
+    if std::env::var("RUST_LOG").is_err() {
+        unsafe { std::env::set_var("RUST_LOG", "info") }
+    }
     tracing_subscriber::fmt::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .init();
